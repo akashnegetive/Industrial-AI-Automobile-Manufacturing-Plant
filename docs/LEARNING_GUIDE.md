@@ -106,10 +106,7 @@ Some metadata is also inconsistent: oven temperatures are in °F, and stations O
 
 ---
 
-## 5. Interview preparation, starting now
 
-The assignment says: *"AI coding assistants are allowed, but disclose where you used them and be ready to explain every line."*
 
 - Keep a note in `docs/AI_USAGE.md` of what the AI wrote and how you checked it.
-- After each step, re-run the code yourself, change one thing, and see what happens.
-- Practise the 7 interview questions at the end of the assignment PDF. Each day's notes say which question that day's work answers.
+
