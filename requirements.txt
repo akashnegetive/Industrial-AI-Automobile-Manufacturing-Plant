@@ -1,0 +1,9 @@
+pandas>=2.2
+pyarrow
+scikit-learn
+rapidfuzz
+networkx
+pydantic>=2
+matplotlib
+tabulate
+pytest
