@@ -10,4 +10,12 @@ make setup   # create venv, install requirements
 make all     # run pipeline steps + tests
 ```
 
-Start reading at `docs/LEARNING_GUIDE.md`. Progress so far: Part B.1 dataset profile (`reports/01_dataset_profile.md`).
+Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs/dayNN_explained.md`.
+
+## Progress
+| Part | Status | Output |
+|---|---|---|
+| B.1 Dataset profiles | done | `reports/01_dataset_profile.md` |
+| B.2 Data-quality report (37 issues) | done | `reports/02_data_quality.md` |
+| B.3 Identity schemes | done | `reports/03_identity_schemes.md` |
+| B.4 Production problems (9, with evidence) | done | `reports/04_production_problems.md` |
