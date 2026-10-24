@@ -1,0 +1,321 @@
+# Plant DDN-01 knowledge-graph ontology
+# Validated and rendered by `python -m ddn.ontology` (docs/ontology.md).
+version: 1.0.0
+released: 2026-10-23
+namespace: ddn1
+
+storage:
+  graph: Neo4j 5 Community (property graph, Cypher)
+  timeseries: Parquet files partitioned by tag and day (graph holds only a pointer)
+  analytics: networkx (exported subgraphs)
+  rationale: >
+    The questions in Part D are path traversals with time filters (VIN -> station -> equipment
+    -> signal window). A property graph keeps relationship properties (time, confidence,
+    provenance) directly on the edge; RDF needs reification or RDF-star for the same thing.
+    Cypher is also the language an LLM writes most reliably for Part E2.
+
+# Every edge must carry these properties, so we can always answer
+# "why does the graph think this?" (assignment Part D).
+provenance:
+  source_system: {type: enum, values: [SAP_PM, PI, WinCC, S7_OPC, MES, TOOL_CTRL, QMS, ALARMS, DOCUMENTS, PIPELINE, ENGINEER], required: true}
+  method:        {type: enum, values: [source_key, rule, fuzzy, ml, engineer, inferred, derived], required: true}
+  confidence:    {type: float, min: 0.0, max: 1.0, required: true}
+  created_at:    {type: datetime, required: true}
+  status:        {type: enum, values: [approved, suggested, rejected], required: true}   # mirrors CogniteAnnotation.status
+  evidence:      {type: string, required: false}    # e.g. "tag token R07 + line L2 + unit kA"
+  model_version: {type: string, required: false}    # matcher version that produced the link
+
+# Node types. `key` is the unique id property; `cognite` names the closest Cognite
+# Core Data Model view (the mapping for interview question 7).
+node_types:
+  Site:
+    isa95: Enterprise/Site
+    cognite: CogniteAsset
+    key: fl
+    properties: {fl: string!, name: string!}
+    example: DDN1
+  Shop:
+    isa95: Area
+    cognite: CogniteAsset
+    key: fl
+    properties: {fl: string!, name: string!, code: string!}
+    example: DDN1-BIW
+  Line:
+    isa95: Production line / process cell
+    cognite: CogniteAsset
+    key: fl
+    properties: {fl: string!, name: string!, code: string!}
+    example: DDN1-BIW-L2
+  Station:
+    isa95: Work cell / work unit
+    cognite: CogniteAsset
+    key: fl
+    description: >
+      One node per physical station. MES codes are stored as an alias property,
+      so the MES identity and the maintenance identity live on the same node.
+    properties: {fl: string!, name: string!, mes_code: string, rfid_reader: string, sequence: int}
+    example: DDN1-BIW-L2-ST04 (mes_code B2-04)
+  Equipment:
+    isa95: Equipment
+    cognite: CogniteEquipment
+    key: fl
+    properties:
+      fl: string!
+      name: string!
+      asset_type: string!          # Robot, Pump, Burner, ... (ISO 14224 equipment class)
+      iso14224_class: string
+      sap_equipment_no: string
+      manufacturer: string
+      model: string
+      install_date: date
+      criticality: string
+      aliases: list[string]        # every name seen in other systems: R07, RB-207, BIW.L2.ST04.RB07
+    example: DDN1-BIW-L2-ST04-RB07
+  Component:
+    isa95: Equipment module
+    cognite: CogniteEquipment
+    key: fl
+    properties: {fl: string!, name: string!, asset_type: string!, sap_equipment_no: string, aliases: "list[string]"}
+    example: DDN1-BIW-L2-ST04-RB07-WG
+  Tool:
+    isa95: Equipment (personnel-held or controller channel)
+    cognite: CogniteEquipment
+    key: tool_id
+    description: Tool-controller channels (TC14) and hand tools (HW-07) as they appear in MES results.
+    properties: {tool_id: string!, kind: string!, calibration_due: date}
+    example: TC14
+  TimeSeries:
+    isa95: n/a
+    cognite: CogniteTimeSeries
+    key: tag
+    description: Metadata only. Values stay in Parquet; `store_uri` is the pointer.
+    properties:
+      tag: string!
+      source_system: string!
+      description: string
+      unit: string                 # unit as configured in the source
+      unit_canonical: string       # after normalisation (degF -> degC)
+      isa51_code: string           # TT, PT, FT, ... parsed from the tag or drawing
+      signal: string               # WELDCUR, NOZTEMP, Rh ...
+      store_uri: string            # e.g. parquet://ts/tag=DDN1_BIW_L2_R07_WELDCUR.PV
+      latest_value: float
+      latest_at: datetime
+    example: DDN1_BIW_L2_R07_WELDCUR.PV
+  WorkOrder:
+    isa95: Maintenance work request
+    cognite: CogniteActivity (extended)
+    key: wo_number
+    properties: {wo_number: string!, wo_type: string!, priority: string, created_at: datetime!, closed_at: datetime,
+                 short_text: string!, long_text: string, technician: string}
+    example: "4102961"
+  FailureMode:
+    isa95: n/a
+    cognite: none (custom view)
+    key: code
+    description: ISO 14224 failure-mode codes (PDE, LOO, HIO, ...) from the manuals.
+    properties: {code: string!, name: string!, standard: string!}
+    example: LOO (low output)
+  Document:
+    isa95: n/a
+    cognite: CogniteFile
+    key: doc_id
+    properties: {doc_id: string!, title: string!, kind: string!, revision: string, path: string!, ocr: bool}
+    example: DWG-PNT-SL-201
+  Alarm:
+    isa95: Event
+    cognite: CogniteActivity
+    key: event_id
+    properties: {event_id: string!, event_time: datetime!, event_type: string!, code: string, message: string,
+                 priority: int, duration_s: int, source_raw: string!, is_duplicate: bool}
+    example: EV900708
+  AnomalyEvent:
+    isa95: Event
+    cognite: CogniteActivity
+    key: anomaly_id
+    description: Written by Part E1 anomaly detection; start/end define the window used to find affected VINs.
+    properties: {anomaly_id: string!, start: datetime!, end: datetime!, detector: string!, score: float,
+                 kind: string, judged: string}     # judged = true_positive / false_alarm / unreviewed
+    example: AN-0001
+  Vehicle:
+    isa95: Material lot (serialised product)
+    cognite: CogniteDescribable (custom view)
+    key: vin
+    properties: {vin: string!, model_code: string!, model_desc: string, color: string, body_start_at: datetime!}
+    example: MDDA5XL04D000101
+  Part:
+    isa95: Material sublot (fitted part)
+    cognite: CogniteDescribable (custom view)
+    key: part_uid
+    description: >
+      One node per fitted part instance (vin|part_no), so a part can link to exactly one
+      supplier lot. Part numbers are a property, not separate nodes.
+    properties: {part_uid: string!, part_no: string!, part_desc: string, supplier: string}
+    example: MDDA5XL04D000101|DOOR_SEAL
+  SupplierLot:
+    isa95: Material lot
+    cognite: CogniteDescribable (custom view)
+    key: lot_id
+    description: Supplier lots and internal press batches (PB-PL1-...).
+    properties: {lot_id: string!, supplier: string!, part_no: string!, produced_from: datetime, produced_to: datetime}
+    example: WS-260904-B
+  TorqueResult:
+    isa95: Process segment result
+    cognite: CogniteDescribable (custom view)
+    key: result_id
+    properties: {result_id: string!, joint_id: string!, program: string, torque_nm: float!, angle_deg: float,
+                 torque_min: float!, torque_max: float!, status: string!, attempt: int!, timestamp: datetime!}
+    example: "5000001"
+  Defect:
+    isa95: Quality test result
+    cognite: CogniteDescribable (custom view)
+    key: defect_id
+    properties: {defect_id: string!, detected_at: datetime!, defect_code: string!, defect_family: string,
+                 defect_desc: string, location: string, severity: string!, inspector_remark: string}
+    example: D700004
+
+# Edge types. `from`/`to` list the allowed node labels.
+# Cardinality is per source node: one = at most one active edge, many = any number.
+# `time_valid: true` means the edge has valid_from / valid_to (see `temporal` below).
+edge_types:
+  partOf:
+    from: [Shop, Line, Station, Equipment, Component]
+    to:   [Site, Shop, Line, Station, Equipment]
+    cardinality: one
+    time_valid: true
+    description: ISA-95 containment. Time-bounded so a relocated robot keeps its history.
+  hasTimeSeries:
+    from: [Equipment, Component, Station, Line]
+    to:   [TimeSeries]
+    cardinality: many
+    description: Output of the tag matcher (Part C).
+  hasWorkOrder:
+    from: [Equipment, Component, Station, Line, Tool]
+    to:   [WorkOrder]
+    cardinality: many
+    description: Output of the work-order matcher (Part C4).
+  reportsFailure:
+    from: [WorkOrder]
+    to:   [FailureMode]
+    cardinality: many
+    description: Failure mode extracted from text or failure_code and mapped to ISO 14224.
+  mentionedIn:
+    from: [Equipment, Component, Station, TimeSeries, Tool]
+    to:   [Document]
+    cardinality: many
+    properties: {page: int!, label: string!}
+    description: Tag or label found in a drawing or manual (Part C5), with page number.
+  feeds:
+    from: [Station, Equipment, Line]
+    to:   [Station, Equipment, Line]
+    cardinality: many
+    properties: {relation: string}      # process_flow | conditions (AHU -> booth) | supplies (utility)
+    description: Upstream -> downstream. Used by query D4 to walk back from an inspection point.
+  passedThrough:
+    from: [Vehicle]
+    to:   [Station]
+    cardinality: many
+    properties: {passed_at: datetime!, reader_id: string, inferred: bool!}
+    description: RFID passage. Missed reads are filled from line order + takt and flagged inferred=true.
+  processedBy:
+    from: [Vehicle]
+    to:   [Equipment, Tool]
+    cardinality: many
+    properties: {start: datetime!, end: datetime!}
+    materialised_for: [Robot, SealerRobot, Nutrunner, Dispenser]
+    description: >
+      Derived from passedThrough + which equipment was partOf the station at that time.
+      Only materialised for equipment that touches the car; for the rest it is computed at query time.
+  containsPart:
+    from: [Vehicle]
+    to:   [Part]
+    cardinality: many
+    properties: {fitted_at: datetime!, fitted_station: string!}
+  fromLot:
+    from: [Part]
+    to:   [SupplierLot]
+    cardinality: one
+  hasTorqueResult:
+    from: [Vehicle]
+    to:   [TorqueResult]
+    cardinality: many
+  tightenedBy:
+    from: [TorqueResult]
+    to:   [Tool]
+    cardinality: one
+  hasDefect:
+    from: [Vehicle]
+    to:   [Defect]
+    cardinality: many
+  detectedAt:
+    from: [Defect]
+    to:   [Station]
+    cardinality: one
+    description: Inspection point where the defect was found (never the cause).
+  causedBy:
+    from: [Defect]
+    to:   [Equipment, Component, AnomalyEvent, SupplierLot]
+    cardinality: many
+    description: Root-cause hypothesis; always method=derived or engineer, never source_key.
+  raisedBy:
+    from: [Alarm]
+    to:   [Equipment, Component, Station, Line]
+    cardinality: one
+    description: Alarm source path normalised and matched to an asset.
+  hasEvent:
+    from: [Equipment, Component, TimeSeries]
+    to:   [AnomalyEvent]
+    cardinality: many
+    description: Written by Part E1.
+  aliasOf:
+    from: [TimeSeries]
+    to:   [TimeSeries]
+    cardinality: one
+    description: Legacy tag name pointing at its current equivalent (relocated robot).
+
+temporal:
+  description: >
+    Edges flagged time_valid carry valid_from and valid_to (null = still valid).
+    Example: DDN1-BIW-L2-ST06-RB12 partOf DDN1-BIW-L1-ST03 until 2026-03-01, then
+    partOf DDN1-BIW-L2-ST06. A VIN query joins on passed_at BETWEEN valid_from AND
+    coalesce(valid_to, now()), so VINs built before and after the move get the right robot.
+
+# Cognite-style split: containers = how data is stored, views = how a role sees it.
+containers:
+  description: >
+    In Neo4j a container is a node label plus its property set and constraints
+    (a uniqueness constraint on the key, plus range indexes on the time properties used in queries).
+  indexes:
+    - {label: Vehicle, property: vin, kind: unique}
+    - {label: Equipment, property: fl, kind: unique}
+    - {label: TimeSeries, property: tag, kind: unique}
+    - {label: Defect, property: detected_at, kind: range}
+    - {label: TorqueResult, property: timestamp, kind: range}
+    - {rel: passedThrough, property: passed_at, kind: range}
+    - {rel: processedBy, property: start, kind: range}
+
+views:
+  Maintenance:
+    audience: Maintenance engineer
+    nodes: {Equipment: [fl, name, asset_type, sap_equipment_no, criticality], WorkOrder: [wo_number, wo_type, short_text, created_at],
+            FailureMode: [code, name], TimeSeries: [tag, unit_canonical, latest_value], Alarm: [event_time, code, message]}
+    edges: [partOf, hasWorkOrder, reportsFailure, hasTimeSeries, raisedBy, hasEvent]
+  Quality:
+    audience: Quality engineer
+    nodes: {Vehicle: [vin, model_code], Defect: [defect_id, defect_code, defect_family, detected_at, location],
+            Station: [fl, mes_code], Equipment: [fl, name], AnomalyEvent: [start, end, kind]}
+    edges: [hasDefect, detectedAt, passedThrough, processedBy, feeds, causedBy, hasEvent]
+  Traceability:
+    audience: Recall / supplier quality
+    nodes: {Vehicle: [vin, body_start_at], Part: [part_no], SupplierLot: [lot_id, supplier],
+            TorqueResult: [joint_id, torque_nm, status, attempt], Tool: [tool_id]}
+    edges: [containsPart, fromLot, hasTorqueResult, tightenedBy, passedThrough]
+
+scale:
+  this_pack: 7,200 VINs x ~44 stations = ~310k passedThrough edges, plus ~80k torque and ~65k part edges
+  assignment_case: 18,000 VINs x 40 stations = 720k passedThrough edges per month
+  strategies:
+    - VINs link to Stations (46 nodes), not to every piece of equipment; processedBy is materialised only for equipment that touches the car.
+    - Range indexes on passed_at/start so time-window queries do not scan all edges.
+    - Bulk load with UNWIND batches of 10k rows (or neo4j-admin import for the first load).
+    - Time series values never enter the graph; only latest_value is cached on the node.
+    - Beyond one plant, partition by plant (one database per site, or a :Site label in every key).

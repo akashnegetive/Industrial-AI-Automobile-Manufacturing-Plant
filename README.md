@@ -19,3 +19,5 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | B.2 Data-quality report (37 issues) | done | `reports/02_data_quality.md` |
 | B.3 Identity schemes | done | `reports/03_identity_schemes.md` |
 | B.4 Production problems (9, with evidence) | done | `reports/04_production_problems.md` |
+| A Vendor research | draft, links to verify | `docs/part_a_research.md` |
+| D Ontology v1 (18 node, 18 edge types) | done | `ontology/ontology_v1.yaml`, `docs/ontology.md` |

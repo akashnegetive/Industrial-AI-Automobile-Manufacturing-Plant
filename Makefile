@@ -1,7 +1,7 @@
 PY ?= .venv/bin/python
 export PYTHONPATH := src
 
-.PHONY: setup profile quality identity problems reports test all
+.PHONY: setup profile quality identity problems ontology reports test all
 setup:
 	python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 profile:            ## Part B.1 dataset profiles
@@ -12,7 +12,9 @@ identity:           ## Part B.3 identity schemes
 	$(PY) -m ddn.identity
 problems:           ## Part B.4 production problems with evidence
 	$(PY) -m ddn.problems
-reports: profile quality identity problems
+ontology:           ## Part D ontology: validate YAML + render docs/ontology.md
+	$(PY) -m ddn.ontology
+reports: profile quality identity problems ontology
 test:
 	$(PY) -m pytest -q
 all: reports test
