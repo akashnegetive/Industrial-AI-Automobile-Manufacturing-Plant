@@ -1,7 +1,7 @@
 PY ?= .venv/bin/python
 export PYTHONPATH := src
 
-.PHONY: setup profile quality identity problems ontology reports test all
+.PHONY: setup profile quality identity problems ontology stage match reports test all
 setup:
 	python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 profile:            ## Part B.1 dataset profiles
@@ -14,7 +14,11 @@ problems:           ## Part B.4 production problems with evidence
 	$(PY) -m ddn.problems
 ontology:           ## Part D ontology: validate YAML + render docs/ontology.md
 	$(PY) -m ddn.ontology
-reports: profile quality identity problems ontology
+stage:              ## Part C1 typed staging tables (Parquet), deg F -> deg C
+	$(PY) -m ddn.tags
+match: stage        ## Part C rules baseline + evaluation on TRAIN labels
+	$(PY) -m ddn.evaluate
+reports: profile quality identity problems ontology match
 test:
 	$(PY) -m pytest -q
 all: reports test

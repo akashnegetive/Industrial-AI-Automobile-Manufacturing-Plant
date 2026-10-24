@@ -21,3 +21,5 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | B.4 Production problems (9, with evidence) | done | `reports/04_production_problems.md` |
 | A Vendor research | draft, links to verify | `docs/part_a_research.md` |
 | D Ontology v1 (18 node, 18 edge types) | done | `ontology/ontology_v1.yaml`, `docs/ontology.md` |
+| C1 Staging (typed Parquet, deg F -> deg C) | done | `data/staging/` (generated) |
+| C Rules baseline: tags F1 0.987, work orders F1 0.950 | done | `reports/05_matching_rules_baseline.md` |
