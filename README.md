@@ -3,12 +3,16 @@
 Industrial AI take-home assignment: link siloed car-plant data to one asset model, load it into a knowledge graph, and use it for anomaly detection and grounded Q&A.
 
 ## Run
+
 1. Copy the candidate-pack `data/` files into `data/raw/` (see `data/raw/README.md`).
-2. Then:
-```bash
-make setup   # create venv, install requirements
-make all     # run pipeline steps + tests
-```
+2. Run everything (first run also creates `.venv` and installs requirements):
+
+| System | One command |
+|---|---|
+| Windows | double-click `run_all.bat`, or in PowerShell: `.\run_all.ps1` |
+| Mac / Linux | `make setup` (first time), then `make all` |
+
+Both run the same steps (`src/ddn/pipeline.py`): reports in `reports/`, staging tables in `data/staging/`, then the tests.
 
 Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs/dayNN_explained.md`.
 

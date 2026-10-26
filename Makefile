@@ -23,4 +23,5 @@ ml: stage           ## Part C ML matcher (TF-IDF blocking + LightGBM), CV metric
 reports: profile quality identity problems ontology match ml
 test:
 	$(PY) -m pytest -q
-all: reports test
+all:                ## everything: same steps as run_all.ps1 on Windows
+	$(PY) -m ddn.pipeline
