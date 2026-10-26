@@ -23,3 +23,4 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | D Ontology v1 (18 node, 18 edge types) | done | `ontology/ontology_v1.yaml`, `docs/ontology.md` |
 | C1 Staging (typed Parquet, deg F -> deg C) | done | `data/staging/` (generated) |
 | C Rules baseline: tags F1 0.987, work orders F1 0.950 | done | `reports/05_matching_rules_baseline.md` |
+| C ML matcher: tags F1 1.000, work orders F1 0.981, 0 wrong auto-links | done | `reports/06_matching_ml.md` |

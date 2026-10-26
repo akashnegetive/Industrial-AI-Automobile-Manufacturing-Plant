@@ -1,7 +1,7 @@
 PY ?= .venv/bin/python
 export PYTHONPATH := src
 
-.PHONY: setup profile quality identity problems ontology stage match reports test all
+.PHONY: setup profile quality identity problems ontology stage match ml reports test all
 setup:
 	python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 profile:            ## Part B.1 dataset profiles
@@ -18,7 +18,9 @@ stage:              ## Part C1 typed staging tables (Parquet), deg F -> deg C
 	$(PY) -m ddn.tags
 match: stage        ## Part C rules baseline + evaluation on TRAIN labels
 	$(PY) -m ddn.evaluate
-reports: profile quality identity problems ontology match
+ml: stage           ## Part C ML matcher (TF-IDF blocking + LightGBM), CV metrics, thresholds
+	$(PY) -m ddn.match_ml
+reports: profile quality identity problems ontology match ml
 test:
 	$(PY) -m pytest -q
 all: reports test
