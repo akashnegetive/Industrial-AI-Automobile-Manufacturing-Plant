@@ -77,13 +77,13 @@ Threshold trade-off (out-of-fold, labelled records):
 | `4102240` | 0.40 | `DDN1-BIW-L3-ST01-RB01-WG` | `DDN1-BIW-L2-ST01-RB01-WG` | RB01 gun water leak at cap adaptor   |
 | `4102853` | 0.17 | `DDN1-BIW-L2-ST06-RB12-WG` | `DDN1-BIW-L2-ST06-RB12` | L2 RB12 ka gun nahi chal raha, servo reset kiya   |
 | `4102901` | 0.13 | `DDN1-BIW-L1-ST05-RB09` | `DDN1-BIW-L1-ST05-RB09-WG` | gun L1 RB09 gun shunt check, ok   |
-| `4100848` | 0.08 | `DDN1-BIW-L2-ST08-RB16-WG` | `DDN1-BIW-L1-ST08-RB16` | Robot 16 tip dress fail, cutter blade changed   |
+| `4100848` | 0.08 | `DDN1-BIW-L1-ST08-RB16-WG` | `DDN1-BIW-L1-ST08-RB16` | Robot 16 tip dress fail, cutter blade changed   |
 | `4101272` | 0.05 | `DDN1-BIW-L3-ST04-RB08` | `DDN1-PNT-ED-P301A` | pump Circulation pump P301-A mechanical seal leaking, seal replaced   |
-| `4101088` | 0.04 | `DDN1-BIW-L3-ST04-RB07` | `DDN1-BIW-L2-ST04-RB07-WG` | Rob 07 gun water leak at cap adaptor   |
-| `4100468` | 0.04 | `DDN1-BIW-L2-ST07-RB13-WG` | `DDN1-BIW-L2-ST07-RB13` | Rob 13 dress pack cable damaged, replaced  Robot 13 |
+| `4101088` | 0.04 | `DDN1-BIW-L1-ST04-RB07` | `DDN1-BIW-L2-ST04-RB07-WG` | Rob 07 gun water leak at cap adaptor   |
+| `4100468` | 0.04 | `DDN1-BIW-L1-ST07-RB13-WG` | `DDN1-BIW-L2-ST07-RB13` | Rob 13 dress pack cable damaged, replaced  Robot 13 |
 | `4101676` | 0.03 | `DDN1-BIW-L2-ST04-RB07-WG` | `DDN1-BIW-L2-ST04-RB07` | L2 RB07 dress pack cable damaged, replaced  Robot 07 |
 | `4102921` | 0.01 | `DDN1-PNT-OV2-Z2` | `DDN1-PNT-OV1-Z2` | Z2 oven profile run, within spec   |
-| `4100443` | 0.00 | `DDN1-BIW-L2-ST04-RB07` | `DDN1-BIW-L3-ST04-RB07` | R7 dress pack cable damaged, replaced   |
+| `4100443` | 0.00 | `DDN1-BIW-L1-ST04-RB07` | `DDN1-BIW-L3-ST04-RB07` | R7 dress pack cable damaged, replaced   |
 | `4100279` | 0.00 | `DDN1-ASM-TR2-ST04-NR07-TC` | `DDN1-ASM-TR1-ST02-NR02-TC` | TC controller comm fault, rebooted   |
-| `4102637` | 0.00 | `DDN1-PNT-OV1-Z4-FAN` | `DDN1-PNT-OV1-Z4-BR` | OV1 BR combustion tuning, O2 checked   |
-| `4102282` | 0.00 | `DDN1-BIW-L2-ST01-RB02` | `DDN1-BIW-L1-ST05-RB09-WG` | WG water leak at cap adaptor   |
+| `4102637` | 0.00 | `DDN1-PNT-OV1-Z3-FAN` | `DDN1-PNT-OV1-Z4-BR` | OV1 BR combustion tuning, O2 checked   |
+| `4102282` | 0.00 | `DDN1-BIW-L1-ST01-RB01` | `DDN1-BIW-L1-ST05-RB09-WG` | WG water leak at cap adaptor   |

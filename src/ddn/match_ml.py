@@ -170,7 +170,7 @@ def pair_features(recs: pd.DataFrame, cands: dict[str, set[str]], cat: pd.DataFr
     rows = []
     for rec in recs.itertuples():
         t = toks[rec.record]
-        cs = cands[rec.record]
+        cs = sorted(cands[rec.record])     # sets have no stable order across runs -> sort for reproducibility
         n_eq = sum(cat.at[f, "equip"] in t.equip for f in cs)
         # Does the text confirm the SAP equipment number? 1 agree, 0 contradict, -1 cannot tell.
         # This lets the model learn *when* to distrust the number (wrong in ~4 % of WOs).
@@ -217,7 +217,9 @@ def make_model() -> lgb.LGBMClassifier:
 
 
 def best_per_record(pairs: pd.DataFrame, prob: np.ndarray) -> pd.DataFrame:
-    p = pairs[["record", "fl"]].assign(prob=prob).sort_values(["record", "prob"], ascending=[True, False])
+    # ties (e.g. "R7" -> robot 7 on L1, L2 and L3 equally likely) are broken by FL so runs are reproducible
+    p = pairs[["record", "fl"]].assign(prob=prob).sort_values(["record", "prob", "fl"], ascending=[True, False, True],
+                                                              kind="mergesort")
     top = p.groupby("record").head(2)
     first = top.groupby("record").first()
     second = top.groupby("record").prob.nth(1).groupby(level=0).first() if len(top) else pd.Series(dtype=float)
