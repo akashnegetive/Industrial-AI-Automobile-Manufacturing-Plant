@@ -120,10 +120,26 @@ def page_texts(path: Path) -> list[tuple[int, str, str]]:
     return out
 
 
+def _find_tesseract() -> None:
+    """Use Tesseract from PATH, or from the default Windows install folder if PATH was not set."""
+    import os
+    import shutil
+
+    import pytesseract
+    if shutil.which("tesseract"):
+        return
+    for exe in (r"C:\Program Files\Tesseract-OCR\tesseract.exe", r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+                os.path.expandvars(r"%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe")):
+        if os.path.exists(exe):
+            pytesseract.pytesseract.tesseract_cmd = exe
+            return
+
+
 def ocr_page(page) -> str:
     """Several Tesseract passes merged: block mode finds big labels, sparse mode finds small ones."""
     import pytesseract
     from PIL import Image, ImageOps
+    _find_tesseract()
     texts = []
     for dpi in (300, 400):
         pix = page.get_pixmap(dpi=dpi)
@@ -296,7 +312,8 @@ def main() -> None:
     out += [f"| `{r.code}` | {r.manual} | {r.text[:110]} |" for r in failure_modes.itertuples()]
     path = REPORTS / "07_documents.md"
     path.write_text("\n".join(out) + "\n", encoding="utf-8")
-    print(f"drawings: {len(dr)} labels, {dr.target.notna().sum()} resolved; manuals: {len(man)} model links, "
+    ocr_state = "OCR used" if (dr.method.str.startswith("ocr_c") | (dr.method == "ocr")).any() else "OCR NOT used"
+    print(f"drawings: {len(dr)} labels, {dr.target.notna().sum()} resolved ({ocr_state}); manuals: {len(man)} model links, "
           f"{len(alarm_codes)} alarm codes, {len(failure_modes)} failure modes -> {path}")
 
 
