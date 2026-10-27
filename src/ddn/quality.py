@@ -273,6 +273,8 @@ def check_workorders(wo: pd.DataFrame, a: pd.DataFrame, labels: pd.DataFrame) ->
     lab = labels.merge(wo, on="wo_number")
     lab = lab[lab.equipment_no.notna()].assign(eq_fl=lambda x: x.equipment_no.map(eq))
     wrong = lab[lab.eq_fl != lab.functional_location]
+    water = wo[wo.short_text.str.contains("water leak", case=False) & wo.failure_code.notna()]
+    leak_share = (water.failure_code == "LEAK").mean()
     hinglish = wo[wo.short_text.str.contains(r"\b(?:ka|nahi|raha|hai|kiya|aa)\b", case=False)]
     return [
         Issue(dataset="work_orders", check="Blank equipment number", severity="High",
@@ -295,6 +297,12 @@ def check_workorders(wo: pd.DataFrame, a: pd.DataFrame, labels: pd.DataFrame) ->
         Issue(dataset="work_orders", check="Blank failure code", severity="Medium",
               count=int(wo.failure_code.isna().sum()), documented=True, evidence=["failure_code empty"],
               impact="Failure mode must be extracted from text and mapped to ISO 14224."),
+        Issue(dataset="work_orders", check="SAP failure_code unrelated to the text", severity="High",
+              count=int(wo.failure_code.notna().sum()),
+              evidence=[f"'water leak' WOs coded LEAK: {leak_share:.0%} (6 codes -> random would be ~17 %)",
+                        f"failure_code blank on {wo[wo.wo_type == 'CM'].failure_code.isna().mean():.0%} of CM WOs, "
+                        "on every PM/CAL WO"],
+              impact="Cannot be used as a label; failure modes must come from the text (ddn.workorders)."),
         Issue(dataset="work_orders", check="Long text almost always empty", severity="Low",
               count=int(wo.long_text.isna().sum()), evidence=[f"only {wo.long_text.notna().sum()} WOs have long text"],
               impact="The few long texts are the root-cause records for this fortnight's problems."),

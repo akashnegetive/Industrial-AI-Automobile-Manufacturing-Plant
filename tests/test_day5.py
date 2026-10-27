@@ -41,16 +41,21 @@ def test_asset_catalog_tokens(catalog):
 def test_candidates_include_all_lines_when_text_has_no_line(catalog):
     assets, cat = catalog
     wos = pd.DataFrame([{"wo_number": "X1", "short_text": "R7 dress pack cable damaged", "long_text": None,
-                         "functional_location_text": None, "equipment_no": None}])
+                         "functional_location_text": None, "equipment_no": None,
+                         "created_at": pd.Timestamp("2026-09-01")}])
     recs = wo_records(wos, WorkOrderRulesMatcher(assets).match_all(wos), assets)
     gen = CandidateGenerator(cat, recs)
     cands = gen.generate(recs, gen.tfidf(recs.text), {"X1": extract(recs.raw.iloc[0])})["X1"]
     assert {"DDN1-BIW-L1-ST04-RB07", "DDN1-BIW-L2-ST04-RB07", "DDN1-BIW-L3-ST04-RB07"} <= cands
 
 
-def test_auto_threshold_excludes_wrong_links():
-    oof = pd.DataFrame({"record": list("abcdef"), "functional_location": ["A", "B", "C", "X", "E", "F"],
+def test_auto_threshold_excludes_wrong_machine_errors(catalog):
+    _, cat = catalog
+    fls = ["DDN1-BIW-L2-ST04-RB07", "DDN1-BIW-L2-ST04-RB08", "DDN1-BIW-L2-ST05-RB09", "DDN1-BIW-L2-ST05-RB10",
+           "DDN1-BIW-L2-ST06-RB11", "DDN1-BIW-L2-ST06-RB12"]
+    oof = pd.DataFrame({"record": list("abcdef"), "functional_location": fls,
                         "confidence": [0.99, 0.97, 0.95, 0.80, 0.70, 0.60]})
-    truth = dict(zip("abcdef", "ABCDEF"))            # 'd' (conf 0.80) is wrong
-    t_auto, _, _ = thresholds(oof, truth)
-    assert t_auto > 0.80                              # the wrong link must not be auto-accepted
+    truth = dict(zip("abcdef", fls))
+    truth["d"] = "DDN1-BIW-L3-ST02-RB03"              # 'd' (conf 0.80) points at a different robot
+    t_auto, _, _ = thresholds(oof, truth, cat)
+    assert t_auto > 0.80                              # a wrong-machine link must never be auto-accepted

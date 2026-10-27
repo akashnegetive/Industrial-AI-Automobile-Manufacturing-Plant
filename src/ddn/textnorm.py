@@ -100,6 +100,9 @@ def extract(text: str) -> Tokens:
         for m in re.finditer(pat, t, flags=re.I):
             prefix = re.match(r"\\b([A-Z]+)", pat).group(1)
             tok.equip.add(prefix + m.group(1).upper())
+    # ISA-5.1 instrument tags name the loop, and the loop number is the vessel's: TT-301 is on tank T-301
+    for m in re.finditer(r"\b(?:TT|TE|TIC|CT|LT|AT)-?(\d{3})\b", t):
+        tok.equip.add("T" + m.group(1))
     for m in re.finditer(r"\bAHU[- ]?(TC[12]|PR)\b", t, flags=re.I):
         tok.equip.add("AHU" + m.group(1).upper())
     for pat, tpl in LINE_PATTERNS:

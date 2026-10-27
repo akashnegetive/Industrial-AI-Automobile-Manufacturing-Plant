@@ -14,9 +14,11 @@ Run: `make ml` (about 1 minute) or `make all`.
 | Source | Rules only F1 | ML F1 | Wrong links in auto-accept band | Blocking recall |
 |---|---:|---:|---:|---:|
 | Tags (539) | 0.987 | **1.000** | 0 | 1.000 |
-| Work orders (888) | 0.950 | **0.981** | **0** (rules: 20) | 0.999 |
+| Work orders (888) | 0.950 | **0.982** | **0** (rules: 20) | 0.999 |
 
-All 1,541 tags: 1,534 auto-accepted, 7 to review. All 2,968 work orders: 2,829 auto-accepted, 108 to review, 31 to the backlog.
+All 1,541 tags: 1,532 auto-accepted, 9 to review. All 2,968 work orders: 2,846 auto-accepted, 122 to review.
+
+> **Updated on Day 6:** a feature bug was fixed (pandas 3 stores missing text as NaN, so `is not None` checks misfired), a time-validity feature was added (`valid_at_time`: the robot moved L1 → L2 in Mar-2026), and the auto-accept rule now also requires *zero wrong-machine errors*. Numbers on this page are after those changes; see `day06_explained.md`.
 
 ## 1. Text normalisation (`textnorm.py`)
 
@@ -69,13 +71,13 @@ For each (record, candidate) pair the features ask: *does this candidate agree w
 
 | Band | Rule | Work orders |
 |---|---|---|
-| Auto-accept | lowest confidence where out-of-fold precision ≥ 0.999 (floor 0.5) | ≥ 0.89 |
+| Auto-accept | above the last wrong-machine error **and** out-of-fold precision ≥ 0.995 (floor 0.5) | ≥ 0.932 |
 | Review | below auto, while the next band of 20 records is still ≥ 50 % correct | ≥ 0.01 |
 | Backlog | the rest (data-quality queue) | < 0.01 |
 
-The trade-off table in the report shows the choice: at 0.50 there are 4 wrong auto-links; at 0.90 there are 0, at the cost of only 11 more records to review. A wrong automatic link can send a recall investigation to the wrong robot, while a review costs an engineer a minute.
+The trade-off table in the report shows the choice: at 0.50 there are 4 wrong auto-links (3 of them a wrong machine); at 0.932 there are 0, at the cost of only 12 more records to review. Errors are split by severity: a *near-miss* is the right machine at the wrong level (robot vs its own weld gun); a *wrong-machine* error points at a different robot or line, and none of those may be auto-accepted. A wrong automatic link can send a recall investigation to the wrong robot, while a review costs an engineer a minute.
 
-## 6. What remains wrong (17 work orders, all in review or backlog)
+## 6. What remains wrong (16 work orders, all in review)
 
 - **No line in the text:** "R7 dress pack…", "Rob 03…". Robot 7 exists on three lines. Only the SAP number or a person can decide.
 - **No equipment at all:** "WG water leak at cap adaptor", "TC controller comm fault".

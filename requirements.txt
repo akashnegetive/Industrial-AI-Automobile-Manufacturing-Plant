@@ -9,3 +9,6 @@ tabulate
 pytest
 pyyaml
 lightgbm
+pymupdf
+spacy
+pytesseract

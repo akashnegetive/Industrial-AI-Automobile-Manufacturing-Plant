@@ -14,6 +14,8 @@ Industrial AI take-home assignment: link siloed car-plant data to one asset mode
 
 Both run the same steps (`src/ddn/pipeline.py`): reports in `reports/`, staging tables in `data/staging/`, then the tests.
 
+Optional: install [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) to read the scanned drawing; without it that one drawing is skipped.
+
 Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs/dayNN_explained.md`.
 
 ## Progress
@@ -27,4 +29,8 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | D Ontology v1 (18 node, 18 edge types) | done | `ontology/ontology_v1.yaml`, `docs/ontology.md` |
 | C1 Staging (typed Parquet, deg F -> deg C) | done | `data/staging/` (generated) |
 | C Rules baseline: tags F1 0.987, work orders F1 0.950 | done | `reports/05_matching_rules_baseline.md` |
-| C ML matcher: tags F1 1.000, work orders F1 0.981, 0 wrong auto-links | done | `reports/06_matching_ml.md` |
+| C ML matcher: tags F1 1.000, work orders F1 0.982, 0 wrong auto-links | done | `reports/06_matching_ml.md` |
+| C5 Documents: 145 drawing labels (incl. OCR of the scan), manual alarm codes + failure modes | done | `reports/07_documents.md` |
+| C4 Work-order failure modes (ISO 14224, spaCy) | done | `reports/08_workorders.md` |
+| MES stations, `feeds` edges, alarm sources | done | `reports/09_stations_alarms.md` |
+| C6 VIN traceability (missed reads inferred + validated) | done | `reports/10_vin_traceability.md` |

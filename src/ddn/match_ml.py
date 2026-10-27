@@ -17,7 +17,7 @@ Pipeline for each record (a tag or a work order):
   4. Evaluation - 5-fold cross-validation grouped by record (out-of-fold
        predictions), so every TRAIN record is scored by a model that never saw it.
   5. Thresholds - read off the out-of-fold precision curve:
-       auto-accept where precision >= 0.999, review queue down to where precision
+       auto-accept above the last wrong-machine error and where precision >= 0.995, review queue down to where precision
        of the next band drops below 0.5, backlog below that.
 
 Run:  python -m ddn.match_ml     (writes data/staging/links_*.parquet, reports/06_matching_ml.md)
@@ -47,9 +47,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 warnings.filterwarnings("ignore", category=UserWarning)
 
 TOP_K = 15
-AUTO_PRECISION = 0.999     # auto-accept band: effectively zero wrong links out-of-fold.
-                           # A wrong auto-link can send a recall investigation to the wrong robot;
-                           # an extra record in the review queue costs an engineer a minute.
+AUTO_PRECISION = 0.995     # auto-accept band precision (near-misses counted as errors), and in addition
+                           # ZERO wrong-machine errors: a wrong robot/line can send a recall investigation
+                           # astray; a review costs an engineer a minute.
 REVIEW_PRECISION = 0.50    # below this, a reviewer would mostly reject -> backlog
 
 # Unit -> equipment types it can belong to (domain knowledge: kA fits a weld robot,
@@ -66,7 +66,7 @@ UNIT_TYPES = {
 FEATURES = ["tfidf", "fuzz_name", "fuzz_fl", "equip_match", "equip_conflict", "line_match", "line_conflict",
             "station_match", "station_conflict", "comp_match", "comp_conflict", "comp_parent", "shop_match",
             "unit_compat", "rule_match", "rule_conf", "eqno_match", "eqno_present", "fltext_match",
-            "eqno_text_agree", "n_equip_cands", "is_component", "embed"]
+            "eqno_text_agree", "valid_at_time", "n_equip_cands", "is_component", "embed"]
 
 
 # ------------------------------------------------------------------ assets
@@ -82,7 +82,10 @@ def asset_catalog(assets: pd.DataFrame) -> pd.DataFrame:
         alpha = [s for s in rest if not re.search(r"\d", s)]
         equip = coded[-1] if coded else (segs[1] if r.shop == "UTL" else None)
         comp = rest[-1] if rest and rest[-1] in alpha else None
+        moved = re.search(r"Relocated .* in ([A-Z][a-z]{2})-(\d{4})", str(r.description))
+        valid_from = pd.Timestamp(f"1 {moved[1]} {moved[2]}") if moved else pd.NaT
         rows.append({"fl": r.functional_location, "shop": r.shop, "line": r.line if r.shop != "UTL" else None,
+                     "valid_from": valid_from,
                      "station": station, "equip": equip, "comp": comp, "asset_type": r.asset_type,
                      "name": r.name, "parent": r.parent_fl,
                      "text": f"{' '.join(segs)} {r.name} {r.asset_type}".lower()})
@@ -98,7 +101,7 @@ def tag_records(tags: pd.DataFrame, rules: pd.DataFrame) -> pd.DataFrame:
         "raw": r.tag_name.map(split_name) + " " + r.description.fillna(""),
         "shop": r.shop, "unit": r.unit,
         "rule_fl": r.functional_location, "rule_method": r.method, "rule_conf": r.confidence,
-        "eqno_fl": None, "fltext_fl": None,
+        "eqno_fl": None, "fltext_fl": None, "time": pd.NaT,
     })
     return out.set_index("record", drop=False)
 
@@ -113,7 +116,7 @@ def wo_records(wos: pd.DataFrame, rules: pd.DataFrame, assets: pd.DataFrame) -> 
         # the SAP number is a *feature*, not a rule: it is wrong in ~4 % of cases
         "rule_fl": fltext, "rule_method": r.method.where(r.method.isin(["fl_text", "name"])),
         "rule_conf": r.confidence.where(r.method.isin(["fl_text", "name"])),
-        "eqno_fl": r.equipment_no.map(eq), "fltext_fl": fltext,
+        "eqno_fl": r.equipment_no.map(eq), "fltext_fl": fltext, "time": r.created_at,
     })
     return out.set_index("record", drop=False)
 
@@ -158,6 +161,12 @@ def _embedder():
         return None
 
 
+def has(x) -> bool:
+    """True for a real value. pandas 3 stores missing strings as NaN, and `NaN is not None` is True,
+    so `is not None` checks silently misfire - always use this helper on catalog fields."""
+    return isinstance(x, str) and x != ""
+
+
 def pair_features(recs: pd.DataFrame, cands: dict[str, set[str]], cat: pd.DataFrame, sims: np.ndarray,
                   toks: dict[str, Tokens], embed=None) -> pd.DataFrame:
     col = {fl: j for j, fl in enumerate(cat.index)}
@@ -189,12 +198,12 @@ def pair_features(recs: pd.DataFrame, cands: dict[str, set[str]], cat: pd.DataFr
                 "equip_match": int(a.equip in t.equip),
                 "equip_conflict": int(bool(t.equip) and a.equip not in t.equip),
                 "line_match": int(a.line in t.lines),
-                "line_conflict": int(bool(t.lines) and a.line is not None and a.line not in t.lines),
+                "line_conflict": int(bool(t.lines) and has(a.line) and a.line not in t.lines),
                 "station_match": int(a.station in t.stations),
-                "station_conflict": int(bool(t.stations) and a.station is not None and a.station not in t.stations),
-                "comp_match": int(a.comp is not None and a.comp in t.comps),
-                "comp_conflict": int(a.comp is not None and a.comp not in t.comps),
-                "comp_parent": int(a.comp is None and bool(t.comps)),
+                "station_conflict": int(bool(t.stations) and has(a.station) and a.station not in t.stations),
+                "comp_match": int(has(a.comp) and a.comp in t.comps),
+                "comp_conflict": int(has(a.comp) and a.comp not in t.comps),
+                "comp_parent": int(not has(a.comp) and bool(t.comps)),
                 "shop_match": -1 if not isinstance(rec.shop, str) else int(rec.shop == a.shop),
                 "unit_compat": -1 if types is None else int(a.asset_type in types),
                 "rule_match": int(rec.rule_fl == f),
@@ -203,8 +212,10 @@ def pair_features(recs: pd.DataFrame, cands: dict[str, set[str]], cat: pd.DataFr
                 "eqno_present": int(isinstance(rec.eqno_fl, str)),
                 "fltext_match": int(rec.fltext_fl == f),
                 "eqno_text_agree": eq_agree,
+                # Was this asset at this place when the record was written? (robot moved L1 -> L2 in Mar-2026)
+                "valid_at_time": -1 if pd.isna(rec.time) or pd.isna(a.valid_from) else int(rec.time >= a.valid_from),
                 "n_equip_cands": n_eq,
-                "is_component": int(a.comp is not None),
+                "is_component": int(has(a.comp)),
                 "embed": float(E[rec_pos[rec.record], col[f]]) if E is not None else np.nan,
             })
     return pd.DataFrame(rows)
@@ -237,22 +248,32 @@ def cross_validate(pairs: pd.DataFrame, truth: dict[str, str], folds: int = 5) -
     return best_per_record(lab, oof)
 
 
-def thresholds(oof: pd.DataFrame, truth: dict[str, str]) -> tuple[float, float, pd.DataFrame]:
-    """Read auto-accept and review thresholds off the out-of-fold precision curve."""
+def is_near_miss(pred: str, true: str, cat: pd.DataFrame) -> bool:
+    """Wrong hierarchy level on the right machine: robot vs its own weld gun, pump vs its motor."""
+    return cat.parent.get(pred) == true or cat.parent.get(true) == pred
+
+
+def thresholds(oof: pd.DataFrame, truth: dict[str, str], cat: pd.DataFrame) -> tuple[float, float, pd.DataFrame]:
+    """Auto-accept threshold: the lowest confidence above which
+         (a) there is NO wrong-machine error (a different robot/line would mislead a recall), and
+         (b) overall precision, counting near-misses as errors, is >= AUTO_PRECISION.
+    Review threshold: walk down in bands of 20 until a band is < REVIEW_PRECISION correct."""
     d = oof.assign(correct=oof.functional_location == oof.record.map(truth)).sort_values("confidence", ascending=False)
+    d["hard_error"] = [not c and not is_near_miss(p, truth[r], cat)
+                       for c, p, r in zip(d.correct, d.functional_location, d.record)]
     d["cum_precision"] = d.correct.cumsum() / np.arange(1, len(d) + 1)
     d["recall"] = d.correct.cumsum() / len(d)
-    ok = d[d.cum_precision >= AUTO_PRECISION]
-    t_auto = float(ok.confidence.min()) if len(ok) else 1.0
-    below = d[d.confidence < t_auto].copy()
-    # walk down in bands of 20 records; stop where a band's precision falls below REVIEW_PRECISION
+    first_hard = d.loc[d.hard_error, "confidence"].max() if d.hard_error.any() else 0.0
+    ok = d[(d.cum_precision >= AUTO_PRECISION) & (d.confidence > first_hard)]
+    t_auto = max(float(ok.confidence.min()) if len(ok) else 1.0, 0.5)
+    below = d[d.confidence < t_auto]
     t_review = t_auto
     for start in range(0, len(below), 20):
         band = below.iloc[start:start + 20]
         if band.correct.mean() < REVIEW_PRECISION:
             break
         t_review = float(band.confidence.min())
-    return max(t_auto, 0.5), min(t_review, max(t_auto, 0.5)), d
+    return t_auto, min(t_review, t_auto), d
 
 
 def band_of(conf: float, t_auto: float, t_review: float) -> str:
@@ -270,7 +291,7 @@ def run_source(name: str, recs: pd.DataFrame, truth: dict[str, str], cat: pd.Dat
     pairs = pair_features(recs, cands, cat, sims, toks, embed)
 
     oof = cross_validate(pairs, truth)
-    t_auto, t_review, curve = thresholds(oof, truth)
+    t_auto, t_review, curve = thresholds(oof, truth, cat)
 
     lab = pairs[pairs.record.isin(truth)].assign(y=lambda d: (d.fl == d.record.map(truth)).astype(int))
     model = make_model().fit(lab[FEATURES], lab.y)
@@ -360,7 +381,7 @@ def main() -> None:
                    f"- Records: {len(res['recs']):,}; candidate pairs: {res['n_pairs']:,} "
                    f"(avg {res['avg_cands']:.1f} per record instead of {len(cat)})",
                    f"- **Blocking recall: {res['block_recall']:.3f}** (true asset is among the candidates)",
-                   f"- Thresholds from the precision curve: auto-accept ≥ **{res['t_auto']:.2f}**, "
+                   f"- Thresholds from the precision curve: auto-accept ≥ **{res['t_auto']:.3f}**, "
                    f"review ≥ **{res['t_review']:.2f}**, backlog below",
                    f"- All {len(final):,} records: auto-accept {bands.get('auto_accept', 0):,}, "
                    f"review {bands.get('review', 0):,}, backlog {bands.get('backlog', 0):,}",
@@ -369,13 +390,17 @@ def main() -> None:
                    f"![PR curve](figures/pr_{key}.png)", "",
                    "Top features (LightGBM gain): " + ", ".join(f"`{k}`" for k in res["importance"].head(8).index), "",
                    "Threshold trade-off (out-of-fold, labelled records):", "",
-                   "| Auto-accept threshold | Auto-linked | Wrong | Precision | Share of records auto-linked correctly |",
-                   "|---:|---:|---:|---:|---:|"]
+                   "| Auto-accept threshold | Auto-linked | Wrong | of which wrong machine | Precision | "
+                   "Share of records auto-linked correctly |",
+                   "|---:|---:|---:|---:|---:|---:|"]
         ok = oof.functional_location == oof[key].map(truth)
-        for thr in [0.5, 0.7, 0.8, 0.85, 0.9, 0.95]:
+        hard = ~ok & ~pd.Series([is_near_miss(p, truth[r], cat) for p, r in zip(oof.functional_location, oof[key])],
+                                index=oof.index)
+        for thr in sorted({0.5, 0.7, 0.8, 0.9, 0.95, res["t_auto"]}):
             sel = oof.confidence >= thr
-            detail.append(f"| {thr:.2f}{' (chosen)' if abs(thr - res['t_auto']) < 0.025 else ''} | {sel.sum()} | "
-                          f"{(sel & ~ok).sum()} | {ok[sel].mean():.4f} | {(sel & ok).sum() / len(oof):.3f} |")
+            detail.append(f"| {thr:.3f}{' (chosen)' if thr == res['t_auto'] else ''} | {sel.sum()} | "
+                          f"{(sel & ~ok).sum()} | {(sel & hard).sum()} | {ok[sel].mean():.4f} | "
+                          f"{(sel & ok).sum() / len(oof):.3f} |")
         detail += ["", f"### Out-of-fold errors ({len(wrong)})", "",
                    "| Record | Confidence | Predicted | Truth | Text |", "|---|---:|---|---|---|"]
         txt = res["recs"].raw

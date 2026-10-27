@@ -25,6 +25,10 @@ STEPS = [
     ("ddn.tags", "Part C1 staging tables"),
     ("ddn.evaluate", "Part C rules baseline"),
     ("ddn.match_ml", "Part C ML matcher"),
+    ("ddn.documents", "Part C5 drawings (incl. OCR) and manuals"),
+    ("ddn.workorders", "Part C4 work-order failure modes (spaCy)"),
+    ("ddn.context", "MES stations, feeds edges, alarm sources"),
+    ("ddn.trace", "Part C6 VIN traceability"),
 ]
 
 DATA_FILES = [
