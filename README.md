@@ -4,7 +4,9 @@ Industrial AI take-home assignment: link siloed car-plant data to one asset mode
 
 ## Run
 
-1. Copy the candidate-pack `data/` files into `data/raw/` (see `data/raw/README.md`).
+1. From the unzipped candidate pack, copy
+   - the `data/` files into `data/raw/` (see `data/raw/README.md`), and
+   - the `documents/` folder into `docs/source_pack/` (see `docs/source_pack/README.md`).
 2. Run everything (first run also creates `.venv` and installs requirements):
 
 | System | One command |

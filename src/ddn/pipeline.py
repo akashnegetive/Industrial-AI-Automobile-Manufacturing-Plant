@@ -40,11 +40,24 @@ DATA_FILES = [
 ]
 
 
+DOCS = ROOT / "docs" / "source_pack" / "documents"
+
+
 def check_data() -> None:
+    """Fail early with a clear message: the pack's data and PDFs are not in git, they must be copied in."""
+    problems = []
     missing = [f for f in DATA_FILES if not (RAW / f).exists()]
     if missing:
-        sys.exit(f"Missing {len(missing)} data file(s) in {RAW}:\n  " + "\n  ".join(missing)
-                 + "\nCopy the data/ folder of Plant_DDN01_Candidate_Pack.zip into data/raw/.")
+        problems.append(f"Missing {len(missing)} data file(s) in {RAW}:\n  " + "\n  ".join(missing)
+                        + "\n  -> copy the pack's data/ folder contents into data/raw/")
+    n_dwg = len(list((DOCS / "drawings").glob("*.pdf")))
+    n_man = len(list((DOCS / "manuals").glob("*.pdf")))
+    if n_dwg < 7 or n_man < 6:
+        problems.append(f"Found {n_dwg}/7 drawings and {n_man}/6 manuals in {DOCS}\n"
+                        "  -> copy the pack's documents/ folder to docs/source_pack/documents/ "
+                        "(so that docs/source_pack/documents/drawings and .../manuals exist)")
+    if problems:
+        sys.exit("\n\n".join(problems))
 
 
 def main() -> None:

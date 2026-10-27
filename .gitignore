@@ -5,4 +5,5 @@ __pycache__/
 data/staging/
 data/raw/*
 !data/raw/README.md
-docs/source_pack/
+docs/source_pack/*
+!docs/source_pack/README.md
