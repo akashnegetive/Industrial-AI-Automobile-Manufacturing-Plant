@@ -4,6 +4,8 @@ Industrial AI take-home assignment: link siloed car-plant data to one asset mode
 
 ## Run
 
+**Windows laptop: full setup, daily update commands and expected output are in [`docs/LAPTOP_SETUP.md`](docs/LAPTOP_SETUP.md).**
+
 1. From the unzipped candidate pack, copy
    - the `data/` files into `data/raw/` (see `data/raw/README.md`), and
    - the `documents/` folder into `docs/source_pack/` (see `docs/source_pack/README.md`).
