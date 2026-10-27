@@ -24,4 +24,5 @@ reports: profile quality identity problems ontology match ml
 test:
 	$(PY) -m pytest -q
 all:                ## everything: same steps as run_all.ps1 on Windows
+	$(PY) -m pip install -q -r requirements.txt
 	$(PY) -m ddn.pipeline
