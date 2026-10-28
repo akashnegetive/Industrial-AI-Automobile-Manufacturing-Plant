@@ -12,3 +12,5 @@ lightgbm
 pymupdf
 spacy
 pytesseract
+neo4j
+streamlit

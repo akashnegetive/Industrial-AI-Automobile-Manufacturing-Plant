@@ -13,3 +13,4 @@ The assignment requires disclosing AI-assistant use. Fill in "How I verified" yo
 | Day 4 | src/ddn/tags.py, match_rules.py, evaluate.py, tests/test_day4.py, docs/day04_explained.md | Drafted parser, staging, rules matchers, evaluation and tests | |
 | Day 5 | src/ddn/textnorm.py, match_ml.py, tests/test_day5.py, docs/day05_explained.md | Drafted normaliser, candidate generation, features, LightGBM CV, threshold logic | |
 | Day 6 | src/ddn/documents.py, workorders.py, context.py, trace.py, tests/test_day6.py, docs/day06_explained.md; fixes in match_ml.py, textnorm.py | Drafted document/OCR extraction, spaCy failure modes, station/alarm linking, VIN traceability; found and fixed matcher bugs | |
+| Day 7 | docker-compose.yml, src/ddn/review.py, apps/review_app.py, graph.py, queries.py, tests/test_day7.py, ontology v1.1.0, docs/day07_explained.md | Drafted review queue/app, Neo4j loader with provenance + validation, seven Cypher queries | |

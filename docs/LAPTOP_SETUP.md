@@ -42,10 +42,25 @@ git pull                                     # get the day's work
 |---|---:|---:|---|
 | 5 | 8 | 35 | `Tags ... F1 1.000`, `Work orders ... auto 0.89` |
 | 6 | 12 | 48 | `drawings: 145 labels ... (OCR used)` (130 without Tesseract), `passages 316,794 (6,332 inferred)` |
+| 7 | 14 | 56 | `graph: 165,698 nodes, 1,133,743 rels ... missing provenance 0`, `7 queries` — **without Docker/Neo4j: 12 steps, 53 passed, 3 skipped** |
 
 If your numbers differ from this table, or a step fails, paste the last ~30 lines of the output into the chat.
 
-## 5. Common problems
+## 5. Day 7 additions: Neo4j and the review screen
+
+**Docker Desktop must be running** (whale icon in the taskbar) before `run_all`. `run_all` starts Neo4j itself
+(`docker compose up -d`). The first time, it downloads the Neo4j image (~1 GB); the graph load takes about 4 minutes.
+
+- **Neo4j browser:** http://localhost:7474, user `neo4j`, password `ddn-plant-2026`
+- **Review screen:** in PowerShell, in the project folder:
+  ```powershell
+  .venv\Scripts\streamlit run apps\review_app.py
+  ```
+  It opens in your browser. Decisions are saved to `data\review\decisions.csv` and used on the next `run_all`.
+  Commit and push that file if you want to keep your decisions.
+- **Stop Neo4j** when you're done (it uses ~1.5 GB RAM): `docker compose down`. The data is kept for next time.
+
+## 6. Common problems
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -54,3 +69,6 @@ If your numbers differ from this table, or a step fails, paste the last ~30 line
 | `OCR NOT used` | Tesseract not installed | Install it (table above) |
 | `python is not recognized` | Python not on PATH | Reinstall Python with "Add to PATH" ticked |
 | Old step/test count after `git pull` | Pull was aborted | Read the `git pull` output; usually the first fix in this table |
+| `Neo4j is not reachable - the 2 graph steps will be SKIPPED` | Docker Desktop not running | Start Docker Desktop, wait for "Engine running", run again |
+| `docker compose up` fails with a port error | Port 7474/7687 already used (another Neo4j) | Stop the other Neo4j, or `docker compose down` then up |
+| Graph load very slow / out of memory | Docker has too little RAM | Docker Desktop → Settings → Resources: give it at least 4 GB |

@@ -38,3 +38,6 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | C4 Work-order failure modes (ISO 14224, spaCy) | done | `reports/08_workorders.md` |
 | MES stations, `feeds` edges, alarm sources | done | `reports/09_stations_alarms.md` |
 | C6 VIN traceability (missed reads inferred + validated) | done | `reports/10_vin_traceability.md` |
+| C7 Review queue + Streamlit review screen; decisions reused as labels | done | `apps/review_app.py`, `data/review/decisions.csv` |
+| D Neo4j graph: 165,698 nodes, 1.13 M edges, provenance on every edge | done | `reports/11_graph_load.md` |
+| D Seven graph queries (Cypher) | done | `reports/12_graph_queries.md` |

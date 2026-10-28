@@ -1,0 +1,22 @@
+# Neo4j graph database for the Plant DDN-01 knowledge graph.
+#   docker compose up -d        start (browser UI: http://localhost:7474, user neo4j / password below)
+#   docker compose down         stop (data is kept in the named volume)
+services:
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: ddn-neo4j
+    ports:
+      - "7474:7474"   # browser UI
+      - "7687:7687"   # Bolt (Python driver)
+    environment:
+      NEO4J_AUTH: neo4j/ddn-plant-2026
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512M
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 5s
+      retries: 30
+volumes:
+  neo4j-data:

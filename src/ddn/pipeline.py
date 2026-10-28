@@ -30,6 +30,11 @@ STEPS = [
     ("ddn.context", "MES stations, feeds edges, alarm sources"),
     ("ddn.trace", "Part C6 VIN traceability"),
 ]
+# Need a running Neo4j (docker compose up -d). Skipped with a message if it is not reachable.
+GRAPH_STEPS = [
+    ("ddn.graph", "Part D load the knowledge graph into Neo4j"),
+    ("ddn.queries", "Part D the seven graph queries"),
+]
 
 DATA_FILES = [
     "assets_cmms_export.csv", "historian_tag_list.csv", "timeseries_1min.csv.gz", "vehicles.csv",
@@ -62,11 +67,19 @@ def check_data() -> None:
 
 def main() -> None:
     check_data()
+    from .graph import neo4j_available
+    print("Checking Neo4j (bolt://localhost:7687) ...", flush=True)
+    graph_ok = neo4j_available()
+    if not graph_ok:
+        print("Neo4j is not reachable - the 2 graph steps will be SKIPPED. Start it with `docker compose up -d` "
+              "(Docker Desktop must be running) and run again.")
+    steps = STEPS + (GRAPH_STEPS if graph_ok else [])
     start = time.time()
-    for n, (module, label) in enumerate(STEPS, 1):
-        print(f"\n[{n}/{len(STEPS)}] {label}  ({module})", flush=True)
+    for n, (module, label) in enumerate(steps, 1):
+        print(f"\n[{n}/{len(steps)}] {label}  ({module})", flush=True)
         importlib.import_module(module).main()
-    print(f"\nAll {len(STEPS)} steps done in {time.time() - start:.0f} s. Reports are in {ROOT / 'reports'}.")
+    print(f"\nAll {len(steps)} steps done in {time.time() - start:.0f} s"
+          + ("" if graph_ok else " (graph steps skipped)") + f". Reports are in {ROOT / 'reports'}.")
     if "--no-tests" not in sys.argv:
         print("\nRunning tests ...", flush=True)
         sys.exit(subprocess.call([sys.executable, "-m", "pytest", "-q"], cwd=ROOT))

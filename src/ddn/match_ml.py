@@ -39,6 +39,7 @@ from .config import REPORTS, STAGING
 from .evaluate import score
 from .load import load
 from .match_rules import STRUCTURAL, RulesMatcher, WorkOrderRulesMatcher
+from .review import engineer_labels
 from .textnorm import Tokens, extract, split_name, translate
 
 matplotlib.use("Agg")
@@ -281,7 +282,11 @@ def band_of(conf: float, t_auto: float, t_review: float) -> str:
 
 
 # --------------------------------------------------------------------- runner
-def run_source(name: str, recs: pd.DataFrame, truth: dict[str, str], cat: pd.DataFrame, embed) -> dict:
+def run_source(name: str, recs: pd.DataFrame, truth: dict[str, str], cat: pd.DataFrame, embed,
+               extra_labels: dict[str, str] | None = None) -> dict:
+    """truth = engineer-confirmed TRAIN labels (used for cross-validation and training).
+    extra_labels = review-app decisions: added to training of the final model only, never to evaluation,
+    so reported scores stay comparable (Cognite's 'refit' on confirmed matches)."""
     toks = {r.record: extract(r.raw) for r in recs.itertuples()}
     gen = CandidateGenerator(cat, recs)
     sims = gen.tfidf(recs.text)
@@ -293,7 +298,8 @@ def run_source(name: str, recs: pd.DataFrame, truth: dict[str, str], cat: pd.Dat
     oof = cross_validate(pairs, truth)
     t_auto, t_review, curve = thresholds(oof, truth, cat)
 
-    lab = pairs[pairs.record.isin(truth)].assign(y=lambda d: (d.fl == d.record.map(truth)).astype(int))
+    train = {**truth, **(extra_labels or {})}
+    lab = pairs[pairs.record.isin(train)].assign(y=lambda d: (d.fl == d.record.map(train)).astype(int))
     model = make_model().fit(lab[FEATURES], lab.y)
     final = best_per_record(pairs, model.predict_proba(pairs[FEATURES])[:, 1])
     final["band"] = [band_of(c, t_auto, t_review) for c in final.confidence]
@@ -337,8 +343,10 @@ def main() -> None:
     wo_rules = WorkOrderRulesMatcher(assets).match_all(wos)
 
     results = [
-        (run_source("Tags", tag_records(tags, tag_rules), tag_truth, cat, embed), tag_rules, "tag_name", tag_truth),
-        (run_source("Work orders", wo_records(wos, wo_rules, assets), wo_truth, cat, embed), wo_rules, "wo_number",
+        (run_source("Tags", tag_records(tags, tag_rules), tag_truth, cat, embed, engineer_labels("tag")),
+         tag_rules, "tag_name", tag_truth),
+        (run_source("Work orders", wo_records(wos, wo_rules, assets), wo_truth, cat, embed,
+                    engineer_labels("workorder")), wo_rules, "wo_number",
          wo_truth),
     ]
     fig_dir = REPORTS / "figures"

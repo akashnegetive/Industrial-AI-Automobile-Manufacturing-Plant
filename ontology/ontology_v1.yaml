@@ -1,7 +1,12 @@
 # Plant DDN-01 knowledge-graph ontology
 # Validated and rendered by `python -m ddn.ontology` (docs/ontology.md).
-version: 1.0.0
-released: 2026-10-23
+version: 1.1.0
+released: 2026-10-28
+changelog:
+  - "1.1.0: passedThrough may end at a Line (paint process areas, booths and ovens are line-level in SAP);
+           Tool partOf its controller Component; processedBy may end at a Component (sealer dispenser);
+           Area-level FLs (die storage, AHU area) load as Line"
+  - "1.0.0: first version"
 namespace: ddn1
 
 storage:
@@ -178,8 +183,8 @@ node_types:
 # `time_valid: true` means the edge has valid_from / valid_to (see `temporal` below).
 edge_types:
   partOf:
-    from: [Shop, Line, Station, Equipment, Component]
-    to:   [Site, Shop, Line, Station, Equipment]
+    from: [Shop, Line, Station, Equipment, Component, Tool]
+    to:   [Site, Shop, Line, Station, Equipment, Component]
     cardinality: one
     time_valid: true
     description: ISA-95 containment. Time-bounded so a relocated robot keeps its history.
@@ -212,13 +217,13 @@ edge_types:
     description: Upstream -> downstream. Used by query D4 to walk back from an inspection point.
   passedThrough:
     from: [Vehicle]
-    to:   [Station]
+    to:   [Station, Line]
     cardinality: many
     properties: {passed_at: datetime!, reader_id: string, inferred: bool!}
     description: RFID passage. Missed reads are filled from line order + takt and flagged inferred=true.
   processedBy:
     from: [Vehicle]
-    to:   [Equipment, Tool]
+    to:   [Equipment, Component, Tool]
     cardinality: many
     properties: {start: datetime!, end: datetime!}
     materialised_for: [Robot, SealerRobot, Nutrunner, Dispenser]

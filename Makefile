@@ -1,7 +1,7 @@
 PY ?= .venv/bin/python
 export PYTHONPATH := src
 
-.PHONY: setup profile quality identity problems ontology stage match ml reports test all
+.PHONY: setup profile quality identity problems ontology stage match ml graph queries review reports test all
 setup:
 	python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 profile:            ## Part B.1 dataset profiles
@@ -20,9 +20,16 @@ match: stage        ## Part C rules baseline + evaluation on TRAIN labels
 	$(PY) -m ddn.evaluate
 ml: stage           ## Part C ML matcher (TF-IDF blocking + LightGBM), CV metrics, thresholds
 	$(PY) -m ddn.match_ml
+graph:              ## Part D load Neo4j (docker compose up -d first)
+	$(PY) -m ddn.graph
+queries:            ## Part D the seven queries
+	$(PY) -m ddn.queries
+review:             ## engineer review screen (Streamlit)
+	.venv/bin/streamlit run apps/review_app.py
 reports: profile quality identity problems ontology match ml
 test:
 	$(PY) -m pytest -q
 all:                ## everything: same steps as run_all.ps1 on Windows
 	$(PY) -m pip install -q -r requirements.txt
+	-docker compose up -d
 	$(PY) -m ddn.pipeline

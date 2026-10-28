@@ -26,4 +26,4 @@ def test_relocation_is_representable():
 
 def test_schema_summary_for_llm():
     s = schema_summary(load_ontology())
-    assert "(Vehicle)-[:passedThrough {passed_at, reader_id, inferred}]->(Station)" in s
+    assert "(Vehicle)-[:passedThrough {passed_at, reader_id, inferred}]->(Station|Line)" in s

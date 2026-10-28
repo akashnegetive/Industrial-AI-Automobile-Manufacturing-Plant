@@ -24,6 +24,15 @@ if ($hash -ne $old) {
     Set-Content -Path $stamp -Value $hash
 }
 
+# Start Neo4j for the graph steps (Day 7+). If Docker is not installed or not running, those steps are skipped.
+if (Get-Command docker -ErrorAction SilentlyContinue) {
+    Write-Host "Starting Neo4j (docker compose up -d) ..."
+    docker compose up -d
+    if ($LASTEXITCODE -ne 0) { Write-Host "Docker did not start Neo4j - is Docker Desktop running? Graph steps will be skipped." }
+} else {
+    Write-Host "Docker not found - graph steps will be skipped (install Docker Desktop, see docs/LAPTOP_SETUP.md)."
+}
+
 $env:PYTHONPATH = Join-Path $PSScriptRoot "src"
 & $py -m ddn.pipeline @args
 exit $LASTEXITCODE
