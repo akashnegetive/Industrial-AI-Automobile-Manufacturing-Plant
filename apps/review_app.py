@@ -40,6 +40,7 @@ done = load_decisions()
 with st.sidebar:
     reviewer = st.text_input("Reviewer", value="engineer")
     kinds = st.multiselect("Show", sorted(q.kind.unique()), default=sorted(q.kind.unique()))
+    search = st.text_input("Search (WO number, tag, text, asset)", value="").strip().lower()
     st.metric("Waiting", len(todo[todo.kind.isin(kinds)]))
     st.metric("Decided", len(done))
     st.caption("Auto-accepted links are already in the graph; this queue is the middle confidence band. "
@@ -49,6 +50,9 @@ tab_review, tab_done = st.tabs(["Review", "Decisions"])
 
 with tab_review:
     items = todo[todo.kind.isin(kinds)]
+    if search:
+        hay = (items.record + " " + items.context + " " + items.proposed_fl).str.lower()
+        items = items[hay.str.contains(search, regex=False)]
     if items.empty:
         st.success("Nothing left to review.")
     else:
