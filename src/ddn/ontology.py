@@ -84,8 +84,15 @@ class Ontology(BaseModel):
 
 def load_ontology(path: Path = ONTOLOGY_FILE) -> Ontology:
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    nodes = {n: NodeType(name=n, **{**spec, "properties": parse_props(spec.get("properties"))})
-             for n, spec in raw["node_types"].items()}
+    common = raw.get("asset_common", {})
+    shared = parse_props(common.get("properties"))
+    nodes = {}
+    for n, spec in raw["node_types"].items():
+        props = parse_props(spec.get("properties"))
+        if n in common.get("applies_to", []):
+            own = {p.name for p in props}
+            props += [p for p in shared if p.name not in own]
+        nodes[n] = NodeType(name=n, **{**spec, "properties": props})
     edges = {e: EdgeType(name=e, **{**spec, "properties": parse_props(spec.get("properties"))})
              for e, spec in raw["edge_types"].items()}
     return Ontology(version=str(raw["version"]), nodes=nodes, edges=edges, provenance=raw["provenance"],

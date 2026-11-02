@@ -35,6 +35,7 @@ STEPS = [
 GRAPH_STEPS = [
     ("ddn.graph", "Part D load the knowledge graph into Neo4j"),
     ("ddn.queries", "Part D the seven graph queries"),
+    ("ddn.graphrag", "Part E2 GraphRAG: 10 questions answered from the graph with citations"),
 ]
 
 DATA_FILES = [

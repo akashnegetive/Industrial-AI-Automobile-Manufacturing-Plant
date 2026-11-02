@@ -30,7 +30,7 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | B.3 Identity schemes | done | `reports/03_identity_schemes.md` |
 | B.4 Production problems (9, with evidence) | done | `reports/04_production_problems.md` |
 | A Vendor research | draft, links to verify | `docs/part_a_research.md` |
-| D Ontology v1 (18 node, 18 edge types) | done | `ontology/ontology_v1.yaml`, `docs/ontology.md` |
+| D Ontology v1.3 (18 node, 19 edge types) | done | `ontology/ontology_v1.yaml`, `docs/ontology.md` |
 | C1 Staging (typed Parquet, deg F -> deg C) | done | `data/staging/` (generated) |
 | C Rules baseline: tags F1 0.987, work orders F1 0.950 | done | `reports/05_matching_rules_baseline.md` |
 | C ML matcher: tags F1 1.000, work orders F1 0.982, 0 wrong auto-links | done | `reports/06_matching_ml.md` |
@@ -42,3 +42,4 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | D Neo4j graph: 165,698 nodes, 1.13 M edges, provenance on every edge | done | `reports/11_graph_load.md` |
 | D Seven graph queries (Cypher) | done | `reports/12_graph_queries.md` |
 | E1 Anomaly detection: 8/8 signal problems, judged (5 quality, 1 equipment, 1 sensor fault, 1 false alarm), in the graph | done | `reports/13_anomalies.md` |
+| E2 GraphRAG: question → validated read-only Cypher → cited answer; 10-question evaluation incl. "I don't know" | done | `src/ddn/graphrag.py`, `apps/ask_app.py`, `reports/14_graphrag.md` |

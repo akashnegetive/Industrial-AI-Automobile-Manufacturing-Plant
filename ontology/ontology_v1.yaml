@@ -1,8 +1,10 @@
 # Plant DDN-01 knowledge-graph ontology
 # Validated and rendered by `python -m ddn.ontology` (docs/ontology.md).
-version: 1.2.0
+version: 1.3.0
 released: 2026-11-02
 changelog:
+  - "1.3.0: declare every property the loader writes (asset_common block, anomaly/lot/alarm/edge extras), so the
+           GraphRAG validator can check generated Cypher against the ontology"
   - "1.2.0: exposedTo (Vehicle -> AnomalyEvent): vehicles processed or conditioned during an anomaly window"
   - "1.1.0: passedThrough may end at a Line (paint process areas, booths and ovens are line-level in SAP);
            Tool partOf its controller Component; processedBy may end at a Component (sealer dispenser);
@@ -33,6 +35,13 @@ provenance:
 
 # Node types. `key` is the unique id property; `cognite` names the closest Cognite
 # Core Data Model view (the mapping for interview question 7).
+# Properties every asset level carries (merged into Site..Component by ddn.ontology).
+asset_common:
+  applies_to: [Site, Shop, Line, Station, Equipment, Component]
+  properties: {asset_type: string, code: string, description: string, iso14224_class: string, aliases: "list[string]",
+               mes_code: string, rfid_reader: string, sequence: int, manufacturer: string, model: string,
+               install_date: date, criticality: string, sap_equipment_no: string}
+
 node_types:
   Site:
     isa95: Enterprise/Site
@@ -106,13 +115,14 @@ node_types:
       store_uri: string            # e.g. parquet://ts/tag=DDN1_BIW_L2_R07_WELDCUR.PV
       latest_value: float
       latest_at: datetime
+      legacy_name: bool          # relocated robot still using its old controller name
     example: DDN1_BIW_L2_R07_WELDCUR.PV
   WorkOrder:
     isa95: Maintenance work request
     cognite: CogniteActivity (extended)
     key: wo_number
     properties: {wo_number: string!, wo_type: string!, priority: string, created_at: datetime!, closed_at: datetime,
-                 short_text: string!, long_text: string, technician: string}
+                 short_text: string!, long_text: string, technician: string, failure_code: string}
     example: "4102961"
   FailureMode:
     isa95: n/a
@@ -132,7 +142,7 @@ node_types:
     cognite: CogniteActivity
     key: event_id
     properties: {event_id: string!, event_time: datetime!, event_type: string!, code: string, message: string,
-                 priority: int, duration_s: int, source_raw: string!, is_duplicate: bool}
+                 priority: int, duration_s: int, source_raw: string!, is_duplicate: bool, manual_meaning: string}
     example: EV900708
   AnomalyEvent:
     isa95: Event
@@ -140,7 +150,9 @@ node_types:
     key: anomaly_id
     description: Written by Part E1 anomaly detection; start/end define the window used to find affected VINs.
     properties: {anomaly_id: string!, start: datetime!, end: datetime!, detector: string!, score: float,
-                 kind: string, judged: string}     # judged = true_positive / false_alarm / unreviewed
+                 kind: string, judged: string, reason: string, signal: string, vehicles_exposed: int,
+                 top_defect: string, defect_lift: float, confirming_wo: string}
+                 # judged = true_positive_quality / true_positive_equipment / sensor_fault / false_alarm
     example: AN-0001
   Vehicle:
     isa95: Material lot (serialised product)
@@ -162,7 +174,8 @@ node_types:
     cognite: CogniteDescribable (custom view)
     key: lot_id
     description: Supplier lots and internal press batches (PB-PL1-...).
-    properties: {lot_id: string!, supplier: string!, part_no: string!, produced_from: datetime, produced_to: datetime}
+    properties: {lot_id: string!, supplier: string!, part_no: string!, produced_from: datetime, produced_to: datetime,
+                 press_line: string, die_id: string, first_fitted: datetime, last_fitted: datetime, vehicles: int}
     example: WS-260904-B
   TorqueResult:
     isa95: Process segment result
@@ -220,13 +233,13 @@ edge_types:
     from: [Vehicle]
     to:   [Station, Line]
     cardinality: many
-    properties: {passed_at: datetime!, reader_id: string, inferred: bool!}
+    properties: {passed_at: datetime!, reader_id: string, inferred: bool!, mes_station: string, uncertainty_min: float}
     description: RFID passage. Missed reads are filled from line order + takt and flagged inferred=true.
   processedBy:
     from: [Vehicle]
     to:   [Equipment, Component, Tool]
     cardinality: many
-    properties: {start: datetime!, end: datetime!}
+    properties: {start: datetime!, end: datetime!, inferred: bool}
     materialised_for: [Robot, SealerRobot, Nutrunner, Dispenser]
     description: >
       Derived from passedThrough + which equipment was partOf the station at that time.

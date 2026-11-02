@@ -14,3 +14,4 @@ spacy
 pytesseract
 neo4j
 streamlit
+openai

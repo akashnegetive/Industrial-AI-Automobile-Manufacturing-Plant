@@ -10,7 +10,8 @@ Keep this page open: it's updated at the end of every day.
 | **Git** | Day 1 | git-scm.com, default options | `git --version` |
 | **Tesseract OCR** (optional) | Day 6 | UB Mannheim installer: https://github.com/UB-Mannheim/tesseract/wiki, default options | `run_all` step 9 prints `(OCR used)` |
 | **Docker Desktop** | Day 7 (Neo4j graph) | docker.com → Docker Desktop for Windows; let it enable **WSL 2**; restart the laptop | `docker run hello-world` |
-| **Ollama** (local LLM, optional) | Day 9 (GraphRAG) | ollama.com → Windows installer, then `ollama pull <model>` (model to be confirmed on Day 9) | `ollama list` |
+| **OpenAI API key** (for GraphRAG) | Day 9 | Your key from platform.openai.com → set it as an environment variable (section 6). Never commit it. | `echo $env:OPENAI_API_KEY` shows `sk-...` |
+| **Ollama** (local LLM, optional alternative) | Day 9 | ollama.com → Windows installer, then `ollama pull qwen2.5-coder:7b` | `ollama list` |
 | Screen recorder | Day 10 (demo video) | Built into Windows: **Win + G** (Xbox Game Bar), or OBS Studio | – |
 
 Docker Desktop is the biggest install (several GB, needs a restart), so do it **before Day 7**.
@@ -44,6 +45,7 @@ git pull                                     # get the day's work
 | 6 | 12 | 48 | `drawings: 145 labels ... (OCR used)` (130 without Tesseract), `passages 316,794 (6,332 inferred)` |
 | 7 | 14 | 56 | `graph: 165,698 nodes, 1,133,743 rels ... missing provenance 0`, `7 queries` — **without Docker/Neo4j: 12 steps, 53 passed, 3 skipped** |
 | 8 | 15 | 63 | `anomalies: 8 events (true_positive_quality 5, ...)`, `graph: 165,706 nodes, 1,136,926 rels` — **without Docker/Neo4j: 13 steps, 59 passed, 4 skipped** |
+| 9 | 16 | 81 | `graphrag (openai): n/10` (with your key) or `graphrag (offline): 10/10` (no key) — **without Docker/Neo4j: 13 steps, 72 passed, 9 skipped** |
 
 If your numbers differ from this table, or a step fails, paste the last ~30 lines of the output into the chat.
 
@@ -61,7 +63,31 @@ If your numbers differ from this table, or a step fails, paste the last ~30 line
   Commit and push that file if you want to keep your decisions.
 - **Stop Neo4j** when you're done (it uses ~1.5 GB RAM): `docker compose down`. The data is kept for next time.
 
-## 6. Common problems
+## 6. Day 9 additions: OpenAI key and the "ask the plant" screen
+
+**Set the key once** (PowerShell; replace the text in quotes with your key, then **close and reopen** PowerShell):
+
+```powershell
+setx OPENAI_API_KEY "sk-...your key..."
+```
+
+Optional: `setx DDN_LLM_MODEL "gpt-4o"` to use a different model (default `gpt-4o-mini`). To force the
+no-LLM baseline for one run: `$env:DDN_LLM = "offline"`.
+
+The key lives only in your Windows user environment. It is never written to a file in the project and never
+goes to GitHub. Don't paste it into chat, screenshots or the demo video.
+
+- `run_all` step 16 asks the 10 evaluation questions and writes `reports\14_graphrag.md` (each call costs a
+  fraction of a cent with gpt-4o-mini).
+- Ask your own question from PowerShell:
+  ```powershell
+  .venv\Scripts\python -m ddn.graphrag ask "Why did water-leak defects rise on Line 2 last Tuesday?"
+  ```
+  (run `$env:PYTHONPATH = "src"` first in that window.)
+- Question screen for the demo: `.venv\Scripts\streamlit run apps\ask_app.py` — shows the answer, its
+  citations, the Cypher and the rows.
+
+## 7. Common problems
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -73,3 +99,7 @@ If your numbers differ from this table, or a step fails, paste the last ~30 line
 | `Neo4j is not reachable - the 2 graph steps will be SKIPPED` | Docker Desktop not running | Start Docker Desktop, wait for "Engine running", run again |
 | `docker compose up` fails with a port error | Port 7474/7687 already used (another Neo4j) | Stop the other Neo4j, or `docker compose down` then up |
 | Graph load very slow / out of memory | Docker has too little RAM | Docker Desktop → Settings → Resources: give it at least 4 GB |
+| `graphrag (offline)` although you set the key | PowerShell window opened before `setx` | Close and reopen PowerShell; check `echo $env:OPENAI_API_KEY` |
+| `openai.AuthenticationError` / `401` | Key wrong or revoked | Create a new key, `setx` again, reopen PowerShell |
+| `openai.RateLimitError` / `429 insufficient_quota` | No credit on the OpenAI account | Add credit on platform.openai.com, or run offline |
+| `model_not_found` | Your account can't use the default model | `setx DDN_LLM_MODEL "gpt-4o"` (or another model you have) |
