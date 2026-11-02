@@ -27,9 +27,19 @@ def assets() -> pd.DataFrame:
     return a[["functional_location", "name", "asset_type"]]
 
 
+def _inputs_version() -> tuple:
+    """Modification times of the files the queue is built from: a new run_all refreshes the screen."""
+    files = ["links_tag_name.parquet", "links_wo_number.parquet", "doc_mentions.parquet", "anomalies.parquet"]
+    return tuple((STAGING / f).stat().st_mtime if (STAGING / f).exists() else 0 for f in files)
+
+
 @st.cache_data
-def queue() -> pd.DataFrame:
+def _queue(version: tuple) -> pd.DataFrame:
     return build_queue()
+
+
+def queue() -> pd.DataFrame:
+    return _queue(_inputs_version())
 
 
 st.title("Plant DDN-01 – link review")
