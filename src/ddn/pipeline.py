@@ -29,6 +29,7 @@ STEPS = [
     ("ddn.workorders", "Part C4 work-order failure modes (spaCy)"),
     ("ddn.context", "MES stations, feeds edges, alarm sources"),
     ("ddn.trace", "Part C6 VIN traceability"),
+    ("ddn.anomaly", "Part E1 anomaly detection linked to equipment and vehicles"),
 ]
 # Need a running Neo4j (docker compose up -d). Skipped with a message if it is not reachable.
 GRAPH_STEPS = [

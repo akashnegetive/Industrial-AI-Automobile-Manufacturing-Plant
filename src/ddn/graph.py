@@ -340,6 +340,37 @@ def load_graph() -> dict:
         d["station_fl"] = d.inspection_point.map(stations.set_index("mes_station").fl)
         counts["detectedAt"] = edges(s, "detectedAt", prov(d, "QMS", "rule", 0.99, evidence="inspection point " + d.inspection_point),
                                      ("Defect", "defect_id", "defect_id"), ("Asset", "fl", "station_fl"))
+        # ---- Part E1 anomaly events (if ddn.anomaly has run)
+        if (STAGING / "anomalies.parquet").exists():
+            an = pd.read_parquet(STAGING / "anomalies.parquet")
+            ev = an.rename(columns={"peak_z": "score", "judged": "judged"}).assign(kind=an.detector)
+            counts["AnomalyEvent"] = nodes(s, "AnomalyEvent", "anomaly_id",
+                                           ev[["anomaly_id", "start", "end", "detector", "score", "kind", "judged",
+                                               "reason", "signal", "vehicles_exposed", "top_defect", "defect_lift",
+                                               "confirming_wo"]].replace([np.inf], 1e9))
+            conf = np.where(an.judged.str.startswith("true_positive") | (an.judged == "sensor_fault"), 0.9, 0.6)
+            ae = prov(an.dropna(subset=["functional_location"]), "PIPELINE",
+                      np.where(an.detector == "flatline", "rule", "ml"), conf[an.functional_location.notna()],
+                      evidence=an.reason)
+            counts["hasEvent(asset)"] = edges(s, "hasEvent", ae, ("Asset", "fl", "functional_location"),
+                                              ("AnomalyEvent", "anomaly_id", "anomaly_id"))
+            at = prov(an.dropna(subset=["tag"]), "PIPELINE", "ml", 0.9)
+            counts["hasEvent(tag)"] = edges(s, "hasEvent", at, ("TimeSeries", "tag", "tag"),
+                                            ("AnomalyEvent", "anomaly_id", "anomaly_id"))
+            vx = pd.read_parquet(STAGING / "anomaly_vins.parquet").merge(an[["anomaly_id", "exposure_basis"]],
+                                                                         on="anomaly_id")
+            counts["exposedTo"] = edges(s, "exposedTo", prov(vx.rename(columns={"exposure_basis": "basis"}),
+                                                              "PIPELINE", "derived", 0.9),
+                                        ("Vehicle", "vin", "vin"), ("AnomalyEvent", "anomaly_id", "anomaly_id"), ["basis"])
+            # causedBy: defects of the over-represented code on exposed vehicles of quality-impacting events
+            d_all = load("quality_defects.csv")
+            cb = vx[vx.has_top_defect].merge(an[["anomaly_id", "top_defect", "defect_lift"]], on="anomaly_id")
+            cb = cb.merge(d_all[["vin", "defect_code", "defect_id"]], left_on=["vin", "top_defect"],
+                          right_on=["vin", "defect_code"])
+            cb = prov(cb, "PIPELINE", "derived", np.where(cb.defect_lift >= 50, 0.9, 0.75),
+                      evidence="defect " + cb.defect_code + " over-represented on vehicles exposed to " + cb.anomaly_id)
+            counts["causedBy"] = edges(s, "causedBy", cb, ("Defect", "defect_id", "defect_id"),
+                                       ("AnomalyEvent", "anomaly_id", "anomaly_id"))
     counts["_seconds"] = round(time.time() - t0)
     return counts
 

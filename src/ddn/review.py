@@ -49,7 +49,12 @@ def build_queue() -> pd.DataFrame:
                      "record": f"{r.doc_id} p.{r.page} '{r.label}'",
                      "context": f"read by {r.method}" + (" (OCR text was corrected)" if r.method == "ocr_corrected" else ""),
                      "proposed_fl": r.target, "confidence": r.confidence})
-    return pd.DataFrame(rows).sort_values(["kind", "confidence"]).reset_index(drop=True)
+    q = pd.DataFrame(rows)
+    # Items that explain a detected anomaly (Part E1) come first: they matter most for root cause.
+    an_file = STAGING / "anomalies.parquet"
+    explains = set(pd.read_parquet(an_file).confirming_wo.dropna()) if an_file.exists() else set()
+    q["explains_anomaly"] = (q.kind == "workorder") & q.record.isin(explains)
+    return q.sort_values(["explains_anomaly", "kind", "confidence"], ascending=[False, True, True]).reset_index(drop=True)
 
 
 def load_decisions() -> pd.DataFrame:

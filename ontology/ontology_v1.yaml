@@ -1,8 +1,9 @@
 # Plant DDN-01 knowledge-graph ontology
 # Validated and rendered by `python -m ddn.ontology` (docs/ontology.md).
-version: 1.1.0
-released: 2026-10-28
+version: 1.2.0
+released: 2026-11-02
 changelog:
+  - "1.2.0: exposedTo (Vehicle -> AnomalyEvent): vehicles processed or conditioned during an anomaly window"
   - "1.1.0: passedThrough may end at a Line (paint process areas, booths and ovens are line-level in SAP);
            Tool partOf its controller Component; processedBy may end at a Component (sealer dispenser);
            Area-level FLs (die storage, AHU area) load as Line"
@@ -271,6 +272,12 @@ edge_types:
     to:   [AnomalyEvent]
     cardinality: many
     description: Written by Part E1.
+  exposedTo:
+    from: [Vehicle]
+    to:   [AnomalyEvent]
+    cardinality: many
+    properties: {basis: string}
+    description: Vehicle went through the equipment (or the station it conditions) during the anomaly window (Part E1).
   aliasOf:
     from: [TimeSeries]
     to:   [TimeSeries]

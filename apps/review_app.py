@@ -58,6 +58,9 @@ with tab_review:
     else:
         item = items.iloc[0].to_dict()
         st.subheader(f"{item['kind']}: {item['record']}")
+        if item.get("explains_anomaly"):
+            st.warning("This work order is the best explanation found for a detected anomaly (Part E1) – "
+                       "reviewing it first makes the root-cause chain complete.")
         st.write(item["context"])
         a = assets().set_index("functional_location")
         prop = item["proposed_fl"]

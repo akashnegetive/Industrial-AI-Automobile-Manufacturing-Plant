@@ -136,6 +136,17 @@ RETURN risk, count(v) AS vehicles_at_risk, sum(CASE WHEN caught THEN 1 ELSE 0 EN
 ORDER BY vehicles_at_risk DESC""", params={})
 
 
+Q["E1"] = dict(view="Quality", title="Anomaly events (Part E1): equipment, verdict, vehicles exposed, defects caused",
+               cypher="""
+MATCH (eq:Asset)-[:hasEvent]->(e:AnomalyEvent)
+OPTIONAL MATCH (v:Vehicle)-[:exposedTo]->(e)
+OPTIONAL MATCH (d:Defect)-[:causedBy]->(e)
+OPTIONAL MATCH (w:WorkOrder {wo_number: e.confirming_wo})
+RETURN e.anomaly_id AS id, eq.fl AS equipment, e.start AS start, e.end AS end, e.judged AS verdict,
+       count(DISTINCT v) AS vehicles_exposed, count(DISTINCT d) AS defects_caused,
+       collect(DISTINCT d.defect_code)[..3] AS defect_codes, w.wo_number + ' ' + w.short_text AS work_order
+ORDER BY start""", params={})
+
 # ----------------------------------------------------------------- helpers
 def _native(v):
     """Neo4j temporal types -> Python datetime/date (they expose .to_native())."""
@@ -287,9 +298,14 @@ def main() -> None:
             "chisel test samples); for the door-seal lot it means the shower test did not see every bad seal."],
             {k: v for k, v in p7.items()})
 
+        e1 = run(s, "E1")
+        if len(e1):
+            out += section("E1", e1, ["- Every event hangs off the equipment it happened on (`hasEvent`); exposed cars "
+                                      "(`exposedTo`) and the defects it explains (`causedBy`, method=derived) are "
+                                      "one hop away. Details and reasons: `reports/13_anomalies.md`."])
     path = REPORTS / "12_graph_queries.md"
     path.write_text("\n".join(out), encoding="utf-8")
-    print(f"7 queries -> {path}")
+    print(f"graph queries -> {path}")
 
 
 if __name__ == "__main__":

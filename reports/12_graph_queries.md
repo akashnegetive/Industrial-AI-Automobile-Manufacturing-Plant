@@ -243,8 +243,9 @@ ORDER BY edges DESC
 | relationship | method | edges | min_conf | max_conf |
 |---|---|---|---|---|
 | passedThrough | inferred | 271 | 0.6 | 0.6 |
+| hasEvent | ml | 1 | 0.6 | 0.6 |
 
-- Edges below 0.8: passedThrough/inferred 271. Inferred RFID passages right after a buffer (P-INS, T1-01) get 0.60 because their validated timing error is large (see report 10); every matcher link in the graph is at or above its auto-accept threshold.
+- Edges below 0.8: passedThrough/inferred 271, hasEvent/ml 1. Inferred RFID passages right after a buffer (P-INS, T1-01) get 0.60 because their validated timing error is large (see report 10); every matcher link in the graph is at or above its auto-accept threshold.
 
 ## D7. Plant head: how many cars built in these two weeks carry a known risk, and how many of them did inspection catch?
 
@@ -283,3 +284,31 @@ ORDER BY vehicles_at_risk DESC
 
 - Windows are the out-of-spec periods found in Part B (re-computed from the time series).
 - `not_caught` is the field-risk number: cars that were exposed but never showed the defect at inspection. For the cold-weld window that is expected (only some welds are undersize and the chisel test samples); for the door-seal lot it means the shower test did not see every bad seal.
+
+## E1. Anomaly events (Part E1): equipment, verdict, vehicles exposed, defects caused
+
+*View: Quality. Parameters: none.*
+
+```cypher
+MATCH (eq:Asset)-[:hasEvent]->(e:AnomalyEvent)
+OPTIONAL MATCH (v:Vehicle)-[:exposedTo]->(e)
+OPTIONAL MATCH (d:Defect)-[:causedBy]->(e)
+OPTIONAL MATCH (w:WorkOrder {wo_number: e.confirming_wo})
+RETURN e.anomaly_id AS id, eq.fl AS equipment, e.start AS start, e.end AS end, e.judged AS verdict,
+       count(DISTINCT v) AS vehicles_exposed, count(DISTINCT d) AS defects_caused,
+       collect(DISTINCT d.defect_code)[..3] AS defect_codes, w.wo_number + ' ' + w.short_text AS work_order
+ORDER BY start
+```
+
+| id | equipment | start | end | verdict | vehicles_exposed | defects_caused | defect_codes | work_order |
+|---|---|---|---|---|---|---|---|---|
+| AN-001 | DDN1-PRS-PL1-PR1 | 2026-09-02 10:04 | 2026-09-02 16:34 | true_positive_quality | 300 | 28 | BP-031 | 4102965 PL1 die BSO LH 03 shut height reset |
+| AN-002 | DDN1-ASM-FN1-ST03-NR14 | 2026-09-03 08:30 | 2026-09-04 10:40 | true_positive_quality | 646 | 38 | AU-077 | 4102964 NR14 transducer calibration - found offset |
+| AN-003 | DDN1-BIW-L2-ST04-RB07 | 2026-09-07 12:45 | 2026-09-08 15:14 | true_positive_quality | 663 | 103 | BW-017 | 4102961 R7 gun tip dressing fail, cap changed |
+| AN-004 | DDN1-PNT-SL-ST02-SR03 | 2026-09-09 06:08 | 2026-09-09 10:24 | true_positive_quality | 108 | 36 | WL-101 | 4102962 Sealer robo 3 nozzle not heating |
+| AN-005 | DDN1-PNT-AHU-AHUTC1-SF | 2026-09-09 14:11 | 2026-09-12 16:50 | true_positive_equipment | 956 | 0 |  | 4102967 AHU TC1 supply fan bearing noise, DE bearing replaced |
+| AN-006 | DDN1-PNT-AHU-AHUTC2 | 2026-09-10 13:04 | 2026-09-10 15:34 | true_positive_quality | 27 | 7 | PD-020 | 4102963 AHU TC2 humidifier valve stuck open |
+| AN-007 | DDN1-PNT-ED-T301 | 2026-09-11 00:00 | 2026-09-11 09:29 | sensor_fault | 237 | 0 |  | 4102968 E-coat TT-301 reading frozen, transmitter reset |
+| AN-008 | DDN1-PNT-OV2-Z3 | 2026-09-12 02:04 | 2026-09-12 03:34 | false_alarm | 19 | 0 |  | 4102966 Oven 2 zone 3 burner valve hunting, tuned |
+
+- Every event hangs off the equipment it happened on (`hasEvent`); exposed cars (`exposedTo`) and the defects it explains (`causedBy`, method=derived) are one hop away. Details and reasons: `reports/13_anomalies.md`.

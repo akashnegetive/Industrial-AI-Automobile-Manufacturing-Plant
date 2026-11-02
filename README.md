@@ -41,3 +41,4 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | C7 Review queue + Streamlit review screen; decisions reused as labels | done | `apps/review_app.py`, `data/review/decisions.csv` |
 | D Neo4j graph: 165,698 nodes, 1.13 M edges, provenance on every edge | done | `reports/11_graph_load.md` |
 | D Seven graph queries (Cypher) | done | `reports/12_graph_queries.md` |
+| E1 Anomaly detection: 8/8 signal problems, judged (5 quality, 1 equipment, 1 sensor fault, 1 false alarm), in the graph | done | `reports/13_anomalies.md` |
