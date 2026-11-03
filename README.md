@@ -42,4 +42,4 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | D Neo4j graph: 165,698 nodes, 1.13 M edges, provenance on every edge | done | `reports/11_graph_load.md` |
 | D Seven graph queries (Cypher) | done | `reports/12_graph_queries.md` |
 | E1 Anomaly detection: 8/8 signal problems, judged (5 quality, 1 equipment, 1 sensor fault, 1 false alarm), in the graph | done | `reports/13_anomalies.md` |
-| E2 GraphRAG: question → validated read-only Cypher → cited answer; 10-question evaluation incl. "I don't know" | done | `src/ddn/graphrag.py`, `apps/ask_app.py`, `reports/14_graphrag.md` |
+| E2 GraphRAG: question → validated read-only Cypher → cited answer; 10/10 tuned, 5/5 on unseen held-out questions (gpt-4o) | done | `src/ddn/graphrag.py`, `apps/ask_app.py`, `reports/14_graphrag.md` |

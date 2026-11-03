@@ -189,6 +189,23 @@ Because round-1 held-out failures were used to choose these fixes, that set is n
 (`HOLDOUT_2`, 5 new questions) was written together with the fixes, before any run. Its score is the one to
 quote.
 
+### Final run (run 6, gpt-4o, temperature 0)
+
+| Set | Score | Meaning |
+|---|---:|---|
+| 10 tuning questions | **10/10** | optimistic: the prompt was tuned on these |
+| Held-out round 2 (unseen) | **5/5** | **the number to quote** |
+| Held-out round 1 (used for fixes) | 4/5 | was 2/5 before the general fixes |
+
+Tuning stopped here on purpose: more fixes would only fit these questions.
+
+The one remaining miss is a known limitation: the model searched for `name CONTAINS 'TC1 supply fan'`, but the
+asset is called "Supply fan AHU-TC1". `CONTAINS` is exact and case-sensitive, so 3 attempts found nothing, and
+the answer was "I don't know" rather than a wrong answer. Next step: an entity-lookup tool (a Neo4j full-text
+index or the Day 5 fuzzy matcher) that turns "AHU TC1 supply fan" into its fl before the query is written.
+
+**In one sentence for the interview:** every failure in every run was "I don't know", never a wrong fact.
+
 ## Results (`reports/14_graphrag.md`)
 
 | # | Question | Expected |
