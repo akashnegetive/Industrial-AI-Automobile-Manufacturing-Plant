@@ -70,8 +70,11 @@ class OpenAIProvider:
         self.model = os.getenv("DDN_LLM_MODEL", "gpt-4o")
 
     def json(self, system: str, user: str, schema: dict, schema_name: str) -> dict:
+        # temperature 0 + fixed seed: the same question gives (almost) the same query every run. Reasoning
+        # models (o1/o3/o4, gpt-5) don't accept a temperature, so it is left out for them.
+        fixed = {} if self.model.startswith(("o1", "o3", "o4", "gpt-5")) else {"temperature": 0, "seed": 7}
         r = self.client.chat.completions.create(
-            model=self.model,
+            model=self.model, **fixed,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
             response_format={"type": "json_schema",
                              "json_schema": {"name": schema_name, "strict": True, "schema": schema}})

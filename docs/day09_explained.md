@@ -163,6 +163,15 @@ is optimistic (the same problem as tuning a model on its test set). That's why `
 They were written after the tuning and are never used to change the prompt; the report scores them separately.
 A test also checks that no expected answer appears in the prompt examples.
 
+### Fifth run: 8/10 and held-out 2/5 with the same code
+
+Two lessons:
+1. **10/10 → 8/10 with no code change** = randomness. The OpenAI calls used the default temperature (1.0).
+   Now `temperature=0` and a fixed `seed`, so runs are repeatable and a change in score means a change in code.
+2. **Held-out 2/5** is the honest number: the tuning fitted the 10 questions better than it generalised. The
+   held-out failures are analysed by *category* (not by question), and only general fixes are allowed. After
+   that, the held-out set is "used", so a fresh one is needed for a fair score again.
+
 ## Results (`reports/14_graphrag.md`)
 
 | # | Question | Expected |
