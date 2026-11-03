@@ -175,6 +175,26 @@ def test_expand_adds_asset_and_work_order_of_an_anomaly_and_the_lot_cause():
 
 
 def test_no_evaluation_answer_is_written_into_the_prompt_examples():
-    answers = {e for _, exp, _ in G.EVAL + G.HOLDOUT for e in exp}
+    answers = {e for _, exp, _ in G.EVAL + G.HOLDOUT + G.HOLDOUT_2 for e in exp}
     leaked = {a for a in answers if a in G.EXAMPLES}
     assert not leaked, leaked
+
+
+
+@NEO
+def test_retry_message_names_hops_that_have_no_data():
+    with graph.driver() as d, d.session() as s:
+        msg = G.empty_hops("MATCH (d:Defect {defect_code: 'AU-077'})-[:causedBy]->(eq:Asset) RETURN eq.fl", s)
+    assert msg and "AnomalyEvent" in msg[0] and "has no edges" in msg[0]
+
+
+@NEO
+def test_expand_finds_the_anomaly_of_an_asset_in_the_rows():
+    with graph.driver() as d, d.session() as s:
+        ctx = G.expand(s, [{"fl": "DDN1-PNT-AHU-AHUTC1-SF", "wo_number": "4102547"}])
+    assert any(c.get("anomaly_id") == "AN-005" and c.get("wo_number") == "4102967" for c in ctx)
+
+
+def test_scorer_accepts_sensor_fault_for_sensor_fault_enum():
+    a = G.Answer("q", "x", sentences=[{"text": "AN-007 was a sensor fault.", "citations": ["AN-007"]}])
+    assert G.score(a, ["AN-007", "sensor_fault"], False)

@@ -172,6 +172,23 @@ Two lessons:
    held-out failures are analysed by *category* (not by question), and only general fixes are allowed. After
    that, the held-out set is "used", so a fresh one is needed for a fair score again.
 
+### Sixth change: general fixes from the held-out failures, and a fresh held-out set
+
+Run 5 (temperature 0): tuned 8/10, held-out 2/5. The failures were sorted into **types**, and only general fixes
+were made:
+
+| Type | Seen in | Fix |
+|---|---|---|
+| Asset named by description ("AHU TC2"), not its fl | Q3 | Answer prompt: name assets by fl |
+| Ontology allows a path the data doesn't have (`Defect-causedBy->Equipment`) | Q4 | Retry message names hops with **no edges in the data** and lists the ones that exist |
+| Two codes with the same description (WL-101 / WL-104 "Water leak") | H1 | Value list shows each code's locations (roof ditch vs front door) |
+| Picked a 2025 work order, ignored the asset's anomaly | H3 | Evidence expansion also adds anomalies on assets in the rows; prefer the 1–14 Sep data period; match assets by name if unsure of the fl |
+| "sensor fault" marked wrong because the scorer wanted `sensor_fault` | H2 | Scorer treats `_` as a space (a grading fix, not a model fix) |
+
+Because round-1 held-out failures were used to choose these fixes, that set is no longer unseen. **Round 2**
+(`HOLDOUT_2`, 5 new questions) was written together with the fixes, before any run. Its score is the one to
+quote.
+
 ## Results (`reports/14_graphrag.md`)
 
 | # | Question | Expected |

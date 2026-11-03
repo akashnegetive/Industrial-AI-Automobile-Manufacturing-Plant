@@ -226,6 +226,42 @@ def check_directions(bare: str, o) -> None:
                 f"{rel} goes ({'|'.join(e.from_)})-[:{rel}]->({'|'.join(e.to)}). Check the arrow direction.")
 
 
+ASSET_LABELS = {"Site", "Shop", "Line", "Station", "Equipment", "Component", "Tool"}
+
+
+def empty_hops(cypher: str, session) -> list[str]:
+    """Hops in the query whose label pair has NO edges in the data, although the ontology allows them,
+    e.g. (Defect)-[:causedBy]->(Equipment): allowed, but every causedBy goes to AnomalyEvent or SupplierLot."""
+    live_patterns(session)
+    have = {}
+    for line in _PATTERNS:
+        m = re.match(r"\(:(\w+)\)-\[:(\w+)\]->\(:(\w+)\)", line)
+        if m:
+            have.setdefault(m.group(2), set()).add((m.group(1), m.group(3)))
+    bare = _strip_strings(cypher)
+    known: dict[str, set[str]] = {}
+    for var, lab in re.findall(r"\(\s*(\w+)\s*:\s*([\w|:&]+)", bare):
+        known.setdefault(var, set()).update(x for x in re.split(r"[|:&]", lab) if x)
+
+    def labels(var, lab):
+        out = {x for x in re.split(r"[|:&]", lab or "") if x} or known.get(var, set())
+        return (out - {"Asset"}) or (ASSET_LABELS if "Asset" in out else set())
+
+    msgs = []
+    for m in HOP.finditer(bare):
+        lv, ll, la, rel, ra, rv, rl = m.groups()
+        if rel not in have or bool(la) == bool(ra):
+            continue
+        a, b = labels(lv, ll), labels(rv, rl)
+        if la:
+            a, b = b, a
+        if a and b and not any(x in a and y in b for x, y in have[rel]):
+            real = ", ".join(f"({x})-[:{rel}]->({y})" for x, y in sorted(have[rel]))
+            msgs.append(f"({'|'.join(sorted(a))})-[:{rel}]->({'|'.join(sorted(b))}) has no edges in the data; "
+                        f"the {rel} edges that exist are {real}")
+    return msgs
+
+
 def run_read(session, q: str) -> list[dict]:
     @unit_of_work(timeout=TIMEOUT_S)                         # server-side time limit for the query
     def work(tx):
@@ -266,6 +302,10 @@ def expand(session, rows: list[dict]) -> list[dict]:
     for an anomaly, the asset it happened on and its work order; for a lot, the defects attributed to it.
     The answer is then grounded on rows + context."""
     vals = _scalars(rows)
+    fls = sorted(v for v in vals if v.startswith("DDN1-"))[:20]
+    if fls:                                                  # anomalies that happened on assets in the rows
+        vals |= {r["a"] for r in session.run(
+            "MATCH (eq:Asset)-[:hasEvent]->(e:AnomalyEvent) WHERE eq.fl IN $fls RETURN e.anomaly_id AS a", fls=fls)}
     anomalies = sorted(v for v in vals if re.fullmatch(r"AN-\d{3}", v))
     lots = sorted(vals & {r["l"] for r in session.run("MATCH (:Defect)-[:causedBy]->(l:SupplierLot) "
                                                        "RETURN DISTINCT l.lot_id AS l")})
@@ -352,8 +392,9 @@ class Answer:
 # ------------------------------------------------------------------- prompts
 def value_hints(session) -> str:
     """Small catalogue of real values so the LLM writes correct filters (codes, verdicts, families)."""
-    codes = [f"{r['c']} {r['d']}" for r in session.run(
-        "MATCH (d:Defect) RETURN d.defect_code AS c, head(collect(DISTINCT d.defect_desc)) AS d ORDER BY c")]
+    codes = [f"{r['c']} {r['d']} (at {', '.join(r['loc'])})" for r in session.run(
+        "MATCH (d:Defect) RETURN d.defect_code AS c, head(collect(DISTINCT d.defect_desc)) AS d, "
+        "collect(DISTINCT d.location)[..3] AS loc ORDER BY c")]
     fam = [r["f"] for r in session.run("MATCH (d:Defect) RETURN DISTINCT d.defect_family AS f ORDER BY f")]
     verdicts = [r["j"] for r in session.run("MATCH (e:AnomalyEvent) RETURN DISTINCT e.judged AS j ORDER BY j")]
     lines = [f"{r['fl']} ({r['n']})" for r in session.run("MATCH (l:Line) RETURN l.fl AS fl, l.name AS n ORDER BY fl")]
@@ -443,6 +484,7 @@ def cypher_prompt(session) -> str:
             "- A vehicle went through a line if it passed one of the line's stations: "
             "(v)-[:passedThrough]->(s:Station) WHERE s.fl STARTS WITH 'DDN1-BIW-L2'. passedThrough to a :Line "
             "exists only for paint-shop lines. 'Line N' on its own means body line N (DDN1-BIW-LN).\n"
+            "- If you are not sure of an exact fl, match the asset by name, e.g. a.name CONTAINS 'Press Line 1'.\n"
             "- Use a different variable name for every node. When you fix a query, keep the dates and values "
             "taken from the question.\n"
             "- Causes ARE in the graph: Defect-[:causedBy]->AnomalyEvent (AnomalyEvent.judged / reason / "
@@ -458,7 +500,9 @@ ANSWER_SYSTEM = ("You answer a plant engineer's question using ONLY the query re
                  "a hypothesis, say so. Write short "
                  "sentences. Every sentence must cite at least one identifier or value copied exactly from the "
                  "rows (e.g. a vin, defect_id, wo_number, anomaly_id, fl, lot_id, or a count). Name the supporting "
-                 "evidence the rows contain (anomaly_id, wo_number, lot_id, fl) in your sentences. Citations are the raw "
+                 "evidence the rows contain (anomaly_id, wo_number, lot_id, fl) in your sentences. Name an asset by its fl "
+                 "(e.g. DDN1-PNT-OV1-Z1), not only by its description. The questions are about the data period "
+                 "1-14 Sep 2026: prefer records from that period over older history unless asked. Citations are the raw "
                  "values only, never column names. Do not use outside knowledge. "
                  "If the rows do not answer the question, set dont_know=true and return no sentences.")
 
@@ -488,7 +532,8 @@ def ask(question: str, provider=None, session=None) -> Answer:
                 ans.rows = run_read(session, ans.cypher)
                 if ans.rows:
                     break
-                problem = ("returned 0 rows. Check the relationship directions against RELATIONSHIPS THAT EXIST, "
+                hops = empty_hops(ans.cypher, session)
+                problem = ("returned 0 rows. " + " ".join(hops) + (" " if hops else "") + "Check the relationship directions against RELATIONSHIPS THAT EXIST, "
                            "use :Asset with fl/asset_type, use values exactly as listed under VALUES, and "
                            "drop filters that are not needed. Keep the dates from the question")
             ans.history.append(f"{plan['cypher']}  -> {problem}")
@@ -622,8 +667,8 @@ EVAL = [
 ]
 
 
-# Held out: written after the prompt was tuned on EVAL, never used to change the prompt. They show
-# whether the fixes generalise or only fit the 10 questions above.
+# Held-out round 1: written after tuning on EVAL. Scored 2/5 in run 5; its failures were then used to
+# find GENERAL fixes (run 6), so it is no longer unseen. Kept to show the before/after.
 HOLDOUT = [
     ("What caused the roof-ditch water leaks on 9 September?", ["DDN1-PNT-SL-ST02-SR03", "AN-004"], False),
     ("Was there a faulty sensor in the e-coat tank?", ["AN-007", "sensor_fault"], False),
@@ -632,12 +677,22 @@ HOLDOUT = [
     ("What was the energy cost of Oven 2 last week?", [], True),
 ]
 
+# Held-out round 2: written together with the run-6 fixes, before any run; never used for tuning.
+HOLDOUT_2 = [
+    ("Which anomaly was judged an equipment problem rather than a quality problem, and on which asset?",
+     ["AN-005", "DDN1-PNT-AHU-AHUTC1-SF"], False),
+    ("How many defects are attributed to anomaly AN-004?", ["36"], False),
+    ("Which work order fixed the sealer robot nozzle problem?", ["4102962"], False),
+    ("How many vehicles got a door seal from lot WS-260903-B?", ["299"], False),
+    ("What is the warranty claim rate for Line 2?", [], True),
+]
+
 
 def score(ans: Answer, expected: list[str], expect_idk: bool) -> bool:
     if expect_idk:
         return ans.dont_know and not ans.sentences
-    blob = (ans.text() + " " + " ".join(c for s in ans.sentences for c in s["citations"])).lower()
-    return not ans.dont_know and all(e.lower() in blob for e in expected)
+    blob = (ans.text() + " " + " ".join(c for s in ans.sentences for c in s["citations"])).lower().replace("_", " ")
+    return not ans.dont_know and all(e.lower().replace("_", " ") in blob for e in expected)
 
 
 def evaluate(provider=None, questions=EVAL) -> list[tuple]:
@@ -653,7 +708,8 @@ def _table(results: list[tuple]) -> list[str]:
     return out
 
 
-def report(results: list[tuple], mode: str, holdout: list[tuple] | None = None) -> str:
+def report(results: list[tuple], mode: str, holdout: list[tuple] | None = None,
+           holdout2: list[tuple] | None = None) -> str:
     n = sum(r[4] for r in results)
     out = ["# Part E2 – GraphRAG: questions answered from the graph, with citations", "",
            f"Generated by `python -m ddn.graphrag`. **Mode: {mode}.** Score: **{n}/{len(results)}** "
@@ -668,12 +724,16 @@ def report(results: list[tuple], mode: str, holdout: list[tuple] | None = None) 
                 f"lists, and {EXAMPLES.count('Q:')} worked examples (see `EXAMPLES` in `graphrag.py`). The examples "
                 "use other entities than these 10 questions but teach the same graph paths.", ""]
     out += _table(results)
+    if holdout2:
+        out += ["", f"## Held-out round 2 (unseen): {sum(r[4] for r in holdout2)}/{len(holdout2)}", "",
+                "Written before this run and never used to change the prompt: the fair estimate for new questions.",
+                "", *_table(holdout2)]
     if holdout:
-        out += ["", f"## Held-out questions: {sum(r[4] for r in holdout)}/{len(holdout)}", "",
-                "Written after the prompt was tuned on the 10 questions above and never used to change it, so this "
-                "is the fairer estimate of how the system does on new questions.", "", *_table(holdout)]
+        out += ["", f"## Held-out round 1 (used for fixes): {sum(r[4] for r in holdout)}/{len(holdout)}", "",
+                "Scored 2/5 in run 5; its failures were used to find general fixes, so it is no longer unseen.",
+                "", *_table(holdout)]
     out += ["", "## Details", ""]
-    for i, (q, exp, idk, a, ok) in enumerate(results + (holdout or []), 1):
+    for i, (q, exp, idk, a, ok) in enumerate(results + (holdout2 or []) + (holdout or []), 1):
         out += [f"### {i}. {q}", "", f"- Mode {a.mode}, attempts {a.attempts}, rows {len(a.rows)}, "
                 f"context rows added: {len(a.context)}, sentences dropped for missing/invalid citations: {a.dropped_sentences}"]
         for h in a.history:
@@ -697,15 +757,17 @@ def main() -> None:
     try:
         results = evaluate(provider)
         holdout = evaluate(provider, HOLDOUT) if provider else None
+        holdout2 = evaluate(provider, HOLDOUT_2) if provider else None
     except Exception as exc:                 # bad key, no credit, unknown model: keep run_all going
         if provider is None:
             raise
         print(f"LLM provider {mode} failed ({type(exc).__name__}: {str(exc)[:200]}) - falling back to offline")
         mode, results = f"offline (the {mode} call failed: {type(exc).__name__})", evaluate(None)
-        holdout = None
+        holdout = holdout2 = None
     path = REPORTS / "14_graphrag.md"
-    path.write_text(report(results, mode, holdout), encoding="utf-8")
-    held = f", held-out {sum(r[4] for r in holdout)}/{len(holdout)}" if holdout else ""
+    path.write_text(report(results, mode, holdout, holdout2), encoding="utf-8")
+    held = (f", held-out new {sum(r[4] for r in holdout2)}/{len(holdout2)}, "
+            f"used {sum(r[4] for r in holdout)}/{len(holdout)}") if holdout else ""
     print(f"graphrag ({mode}): {sum(r[4] for r in results)}/{len(results)}{held} -> {path}")
 
 
