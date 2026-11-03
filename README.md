@@ -43,6 +43,8 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | D Seven graph queries (Cypher) | done | `reports/12_graph_queries.md` |
 | E1 Anomaly detection: 8/8 signal problems, judged (5 quality, 1 equipment, 1 sensor fault, 1 false alarm), in the graph | done | `reports/13_anomalies.md` |
 | Report (11 pages, Part A + design + metrics + limitations + real-plant changes + query appendix) | done | `report/REPORT.pdf` (source `report/REPORT.md`, build `python report/build.py`) |
+| Interview slides (27, with speaker notes) | done | `slides/DDN01_interview.pptx` |
+| Submission checklist | – | `docs/SUBMISSION_CHECKLIST.md` |
 | Data profiling notebook | done | `notebooks/01_data_profiling.ipynb` |
 | Hidden-test predictions (all records, with confidence and band) | done | `outputs/predictions_*.csv` |
 | Demo helper + 5-minute video script | done | `python -m ddn.demo tag` / `vin`, `docs/DEMO_SCRIPT.md` |
