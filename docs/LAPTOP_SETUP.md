@@ -45,7 +45,7 @@ git pull                                     # get the day's work
 | 6 | 12 | 48 | `drawings: 145 labels ... (OCR used)` (130 without Tesseract), `passages 316,794 (6,332 inferred)` |
 | 7 | 14 | 56 | `graph: 165,698 nodes, 1,133,743 rels ... missing provenance 0`, `7 queries` — **without Docker/Neo4j: 12 steps, 53 passed, 3 skipped** |
 | 8 | 15 | 63 | `anomalies: 8 events (true_positive_quality 5, ...)`, `graph: 165,706 nodes, 1,136,926 rels` — **without Docker/Neo4j: 13 steps, 59 passed, 4 skipped** |
-| 9 | 16 | 81 | `graphrag (openai): n/10` (with your key) or `graphrag (offline): 10/10` (no key) — **without Docker/Neo4j: 13 steps, 72 passed, 9 skipped** |
+| 9 | 16 | 87 | `graphrag (openai): n/10` (with your key) or `graphrag (offline): 10/10` (no key) — **without Docker/Neo4j: 13 steps, 77 passed, 10 skipped** |
 
 If your numbers differ from this table, or a step fails, paste the last ~30 lines of the output into the chat.
 
@@ -71,14 +71,14 @@ If your numbers differ from this table, or a step fails, paste the last ~30 line
 setx OPENAI_API_KEY "sk-...your key..."
 ```
 
-Optional: `setx DDN_LLM_MODEL "gpt-4o"` to use a different model (default `gpt-4o-mini`). To force the
+Optional: `setx DDN_LLM_MODEL "gpt-4o-mini"` to use a different model (default `gpt-4o`; mini is cheaper but scored much lower). To force the
 no-LLM baseline for one run: `$env:DDN_LLM = "offline"`.
 
 The key lives only in your Windows user environment. It is never written to a file in the project and never
 goes to GitHub. Don't paste it into chat, screenshots or the demo video.
 
-- `run_all` step 16 asks the 10 evaluation questions and writes `reports\14_graphrag.md` (each call costs a
-  fraction of a cent with gpt-4o-mini).
+- `run_all` step 16 asks the 10 evaluation questions and writes `reports\14_graphrag.md` (the 10 questions cost a
+  few cents with gpt-4o).
 - Ask your own question from PowerShell:
   ```powershell
   .venv\Scripts\python -m ddn.graphrag ask "Why did water-leak defects rise on Line 2 last Tuesday?"
@@ -102,4 +102,4 @@ goes to GitHub. Don't paste it into chat, screenshots or the demo video.
 | `graphrag (offline)` although you set the key | PowerShell window opened before `setx` | Close and reopen PowerShell; check `echo $env:OPENAI_API_KEY` |
 | `openai.AuthenticationError` / `401` | Key wrong or revoked | Create a new key, `setx` again, reopen PowerShell |
 | `openai.RateLimitError` / `429 insufficient_quota` | No credit on the OpenAI account | Add credit on platform.openai.com, or run offline |
-| `model_not_found` | Your account can't use the default model | `setx DDN_LLM_MODEL "gpt-4o"` (or another model you have) |
+| `model_not_found` | Your account can't use the default model | `setx DDN_LLM_MODEL "gpt-4o-mini"` (or another model you have) |

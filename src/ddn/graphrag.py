@@ -14,7 +14,7 @@ Safety and grounding are enforced in code, not only asked for in the prompt:
      Nothing left -> "I don't know".  (No citation, no claim.)
 
 Providers (DDN_LLM=openai|anthropic|ollama|offline; default: first one that is configured)
-  openai     OPENAI_API_KEY, model DDN_LLM_MODEL (default gpt-4o-mini)
+  openai     OPENAI_API_KEY, model DDN_LLM_MODEL (default gpt-4o; gpt-4o-mini scored much lower)
   anthropic  ANTHROPIC_API_KEY, model claude-opus-5-5
   ollama     local Ollama at OLLAMA_URL (default http://localhost:11434), model DDN_LLM_MODEL (default qwen2.5-coder:7b)
   offline    no LLM: question templates mapped to fixed Cypher. A baseline so the pipeline and
@@ -40,7 +40,7 @@ from .graph import driver
 from .ontology import load_ontology, schema_summary
 
 TODAY = date(2026, 9, 15)            # the data ends on 14 Sep; questions are asked "the next day"
-ROW_LIMIT, ROWS_TO_LLM, TIMEOUT_S = 100, 60, 10
+ROW_LIMIT, ROWS_TO_LLM, TIMEOUT_S, MAX_ATTEMPTS = 100, 60, 10, 3
 
 CYPHER_SCHEMA = {
     "type": "object",
@@ -67,7 +67,7 @@ class OpenAIProvider:
     def __init__(self):
         from openai import OpenAI
         self.client = OpenAI()                                   # reads OPENAI_API_KEY
-        self.model = os.getenv("DDN_LLM_MODEL", "gpt-4o-mini")
+        self.model = os.getenv("DDN_LLM_MODEL", "gpt-4o")
 
     def json(self, system: str, user: str, schema: dict, schema_name: str) -> dict:
         r = self.client.chat.completions.create(
@@ -170,6 +170,7 @@ def validate(cypher: str, session=None) -> str:
         for name in filter(None, re.split(r"[|:&!]", expr)):
             if name not in labels | rels:
                 raise CypherRejected(f"unknown label or relationship type '{name}'")
+    check_directions(bare, o)
     props = {p.name for n in o.nodes.values() for p in n.properties} | \
             {p.name for e in o.edges.values() for p in e.properties} | set(o.provenance) | {"valid_from", "valid_to"}
     used = {m.group(2) for m in re.finditer(r"\b([A-Za-z_]\w*)\.([A-Za-z_]\w*)\b", bare)
@@ -187,6 +188,35 @@ def validate(cypher: str, session=None) -> str:
         except Exception as exc:                             # syntax or semantic error from Neo4j
             raise CypherRejected(f"Neo4j rejected the query: {str(exc)[:300]}") from exc
     return q
+
+
+NODE = r"\(\s*(\w*)\s*(?::\s*([\w|:&]+))?[^()]*\)"
+HOP = re.compile(NODE + r"\s*(<?)-\s*\[\s*\w*\s*:\s*(\w+)[^\]]*\]\s*-(>?)\s*(?=" + NODE + ")")
+
+
+def check_directions(bare: str, o) -> None:
+    """Each (a:A)-[:rel]->(b:B) must match the ontology's from/to for rel. Labels come from the node
+    itself or from where the same variable was labelled elsewhere in the query; :Asset is not checked."""
+    known: dict[str, set[str]] = {}
+    for var, lab in re.findall(r"\(\s*(\w+)\s*:\s*([\w|:&]+)", bare):
+        known.setdefault(var, set()).update(x for x in re.split(r"[|:&]", lab) if x)
+
+    def labels(var, lab):
+        out = {x for x in re.split(r"[|:&]", lab or "") if x} or known.get(var, set())
+        return out - {"Asset"}
+
+    for m in HOP.finditer(bare):
+        lv, ll, left_arrow, rel, right_arrow, rv, rl = m.groups()
+        if rel not in o.edges or bool(left_arrow) == bool(right_arrow):
+            continue
+        a, b = labels(lv, ll), labels(rv, rl)
+        if left_arrow:
+            a, b = b, a
+        e = o.edges[rel]
+        if (a and not a & set(e.from_)) or (b and not b & set(e.to)):
+            raise CypherRejected(
+                f"({'|'.join(sorted(a)) or '?'})-[:{rel}]->({'|'.join(sorted(b)) or '?'}) does not exist: "
+                f"{rel} goes ({'|'.join(e.from_)})-[:{rel}]->({'|'.join(e.to)}). Check the arrow direction.")
 
 
 def run_read(session, q: str) -> list[dict]:
@@ -209,9 +239,18 @@ def _plain(v):
 
 
 # ----------------------------------------------------------------- grounding
-def citable(rows: list[dict]) -> set[str]:
-    """Every scalar that appears in the rows can be cited (IDs, codes, names, numbers)."""
-    out = set()
+def _norm(v) -> str:
+    s = str(v).strip().strip("`'\"").lower()
+    if re.fullmatch(r"-?\d{1,3}(,\d{3})+(\.\d+)?|-?\d+(\.\d+)?", s):      # 1,785 / 1785.0 -> 1785
+        f = float(s.replace(",", ""))
+        s = str(int(f)) if f == int(f) else str(f)
+    return s
+
+
+def citable(rows: list[dict], cypher: str | None = None) -> set[str]:
+    """Every scalar in the rows can be cited (IDs, codes, names, numbers). So can a string literal the
+    query filtered on, because rows came back: the lot ID in {lot_id: 'WS-260904-B'} was matched."""
+    out = {_norm(x) for x in re.findall(r"'([^']+)'", cypher or "")} if rows else set()
     def walk(v):
         if isinstance(v, dict):
             for x in v.values():
@@ -220,17 +259,17 @@ def citable(rows: list[dict]) -> set[str]:
             for x in v:
                 walk(x)
         elif v is not None and str(v).strip():
-            out.add(str(v).strip().lower())
+            out.add(_norm(v))
     walk(rows)
     return out
 
 
-def ground(sentences: list[dict], rows: list[dict]) -> tuple[list[dict], int]:
+def ground(sentences: list[dict], rows: list[dict], cypher: str | None = None) -> tuple[list[dict], int]:
     """Keep only sentences whose citations all appear in the rows (and that cite at least one)."""
-    ok_ids = citable(rows)
+    ok_ids = citable(rows, cypher)
     kept, dropped = [], 0
     for s in sentences:
-        cites = [c for c in s.get("citations", []) if str(c).strip().lower() in ok_ids]
+        cites = [c for c in s.get("citations", []) if _norm(c) in ok_ids]
         if cites and len(cites) == len(s.get("citations", [])):
             kept.append({"text": s["text"], "citations": cites})
         else:
@@ -249,6 +288,7 @@ class Answer:
     reason: str = ""
     dropped_sentences: int = 0
     attempts: int = 0
+    history: list[str] = field(default_factory=list)          # rejected / empty queries before the final one
 
     def text(self) -> str:
         if self.dont_know:
@@ -267,26 +307,96 @@ def value_hints(session) -> str:
     return (f"Defect codes: {'; '.join(codes)}\nDefect families: {', '.join(fam)}\n"
             f"AnomalyEvent.judged values: {', '.join(verdicts)}\nWorkOrder.wo_type: CM (repair), PM, CAL (calibration)\n"
             "Functional locations look like DDN1-<shop>-<line>-<station>-<equipment>[-<component>], e.g. "
-            "DDN1-BIW-L2-ST04-RB07 (robot 7, body line 2), DDN1-PNT-SL-ST02-SR03 (sealer robot 3), "
-            "DDN1-PNT-OV2-Z3 (topcoat oven 2 zone 3), DDN1-ASM-FN1-ST03-NR14 (nutrunner 14), "
-            "DDN1-PNT-AHU-AHUTC2 (air handling unit of topcoat booth B).\n"
+            "DDN1-BIW-L1-ST01-RB01 (robot 1, body line 1, station 1), DDN1-PNT-OV1-Z1 (topcoat oven 1 zone 1), "
+            "DDN1-PRS-PL1 (press line 1). Equipment codes: RB robot, SR sealer robot, NR nutrunner, Z oven zone, "
+            "AHU air handling unit.\n"
             f"Lines and areas: {'; '.join(lines)}")
+
+
+_PATTERNS: list[str] = []
+
+
+def live_patterns(session) -> str:
+    """Relationship patterns that really exist in the data, with counts (computed once per process).
+    The ontology says what is allowed; this says what is there, e.g. Defect causedBy only AnomalyEvent."""
+    if not _PATTERNS:
+        _PATTERNS.extend(
+            f"(:{r['f']})-[:{r['t']}]->(:{r['to']})  {r['n']:,}" for r in session.run(
+                "MATCH (a)-[r]->(b) WITH [l IN labels(a) WHERE l <> 'Asset'][0] AS f, type(r) AS t, "
+                "[l IN labels(b) WHERE l <> 'Asset'][0] AS to RETURN f, t, to, count(*) AS n ORDER BY t, f"))
+        types = [r["t"] for r in session.run("MATCH (a:Asset) RETURN DISTINCT a.asset_type AS t ORDER BY t")]
+        _PATTERNS.append("Asset.asset_type values: " + ", ".join(t for t in types if t))
+    return "\n".join(_PATTERNS)
+
+
+# Worked examples. They use other entities than the 10 evaluation questions, but they teach the same
+# paths through the graph (that is their purpose); the report states this.
+EXAMPLES = """\
+Q: Which anomaly explains the cracked panels, and on which equipment? Was there a work order?
+MATCH (d:Defect {defect_code: 'BP-031'})-[:causedBy]->(e:AnomalyEvent)<-[:hasEvent]-(eq:Asset)
+OPTIONAL MATCH (w:WorkOrder {wo_number: e.confirming_wo})
+RETURN eq.fl AS fl, eq.asset_type AS asset_type, e.anomaly_id AS anomaly_id, e.judged AS judged, e.reason AS reason,
+       e.start AS start, e.end AS end, count(DISTINCT d) AS defects, w.wo_number AS wo_number, w.short_text AS wo_text
+
+Q: Why were there so many alignment defects on 3 September?
+MATCH (v:Vehicle)-[:hasDefect]->(d:Defect)
+WHERE d.defect_family = 'alignment' AND date(d.detected_at) = date('2026-09-03')
+OPTIONAL MATCH (d)-[:causedBy]->(e:AnomalyEvent)
+OPTIONAL MATCH (v)-[:containsPart]->(p:Part)-[:fromLot]->(l:SupplierLot)
+RETURN d.defect_code AS defect_code, p.part_no AS part_no, l.lot_id AS lot_id, e.anomaly_id AS anomaly_id,
+       count(DISTINCT d) AS defects, collect(DISTINCT d.defect_id)[..5] AS defect_ids ORDER BY defects DESC
+
+Q: How many vehicles got a battery from lot BT-260902-A, per day?
+MATCH (l:SupplierLot {lot_id: 'BT-260902-A'})<-[:fromLot]-(:Part)<-[c:containsPart]-(v:Vehicle)
+RETURN l.lot_id AS lot_id, date(c.fitted_at) AS day, count(DISTINCT v) AS vehicles ORDER BY day
+
+Q: Which robots processed vehicle MDDA5XK00D002432 in body line 1 station 1?
+MATCH (v:Vehicle {vin: 'MDDA5XK00D002432'})-[p:processedBy]->(e:Asset)
+WHERE e.asset_type = 'Robot' AND e.fl STARTS WITH 'DDN1-BIW-L1-ST01'
+RETURN v.vin AS vin, e.fl AS fl, p.start AS start, p.inferred AS inferred ORDER BY start
+
+Q: List the pressure sensors on Press Line 1.
+MATCH (a:Asset)-[:partOf*0..4]->(:Asset {fl: 'DDN1-PRS-PL1'})
+MATCH (a)-[:hasTimeSeries]->(t:TimeSeries {isa51_code: 'PT'})
+RETURN a.fl AS fl, t.tag AS tag, t.unit AS unit ORDER BY fl
+
+Q: Was the anomaly on press PL1 on 2 September real?
+MATCH (eq:Asset)-[:hasEvent]->(e:AnomalyEvent)
+WHERE eq.fl STARTS WITH 'DDN1-PRS-PL1' AND date(e.start) = date('2026-09-02')
+RETURN eq.fl AS fl, e.anomaly_id AS anomaly_id, e.judged AS judged, e.reason AS reason, e.start AS start
+
+Q: What did the operator eat for lunch? -> can_answer=false (no such data in the schema)"""
 
 
 def cypher_prompt(session) -> str:
     return (f"You translate questions about car plant DDN-01 into ONE read-only Neo4j Cypher query.\n"
-            f"Today is {TODAY:%A %d %B %Y}; the data covers 1-14 Sep 2026 (no production on Sundays).\n"
-            f"Graph schema (use ONLY these labels, relationship types and properties):\n{schema_summary(load_ontology())}\n"
-            f"Every asset node also has the label :Asset and the property fl.\n{value_hints(session)}\n"
-            "Rules: MATCH/OPTIONAL MATCH/WHERE/WITH/RETURN/ORDER BY/LIMIT only; never write data. Write values "
-            "inline as literals. Always RETURN the identifiers of what you found (vin, defect_id, wo_number, "
-            "anomaly_id, fl, lot_id, tag, event_id) so the answer can cite them. Time-series values are NOT in "
-            "the graph. If the schema cannot answer the question, set can_answer=false and explain why.")
+            f"Today is {TODAY:%A %d %B %Y}; the data covers 1-14 Sep 2026 (no production on Sundays).\n\n"
+            f"GRAPH SCHEMA (use ONLY these labels, relationship types and properties):\n"
+            f"{schema_summary(load_ontology())}\n"
+            "Every plant asset (Site, Shop, Line, Station, Equipment, Component, Tool) also has the label :Asset and "
+            "the properties fl and asset_type. Prefer (x:Asset) filtered on fl / asset_type to guessing whether "
+            "something is Equipment or Component.\n\n"
+            f"RELATIONSHIPS THAT EXIST IN THE DATA (direction matters, counts):\n{live_patterns(session)}\n\n"
+            f"VALUES:\n{value_hints(session)}\n"
+            "TimeSeries.isa51_code: TT temperature, PT pressure, FT flow, LT level, CT conductivity, AT analysis/"
+            "humidity, IT current, ET voltage, ST speed, VT vibration, WT weight/force.\n\n"
+            f"EXAMPLES:\n{EXAMPLES}\n\n"
+            "RULES:\n"
+            "- MATCH / OPTIONAL MATCH / WHERE / WITH / RETURN / ORDER BY / LIMIT only. Never write data.\n"
+            "- Write values inline as literals. Dates: date(x.detected_at) = date('2026-09-08').\n"
+            "- RETURN identifiers (vin, defect_id, wo_number, anomaly_id, fl, lot_id, tag) and use AS aliases.\n"
+            "- Causes ARE in the graph: Defect-[:causedBy]->AnomalyEvent, AnomalyEvent.judged / reason / "
+            "confirming_wo, and supplier lots via Vehicle-[:containsPart]->Part-[:fromLot]->SupplierLot. For a "
+            "'why' question, return that evidence.\n"
+            "- Set can_answer=false ONLY when the question needs a kind of data that is not in the schema at all "
+            "(people, costs, measurements that are not listed properties). Otherwise always try a query. "
+            "Time-series values are not in the graph (only the latest_value).")
 
 
 ANSWER_SYSTEM = ("You answer a plant engineer's question using ONLY the query result rows given. Write short "
                  "sentences. Every sentence must cite at least one identifier or value copied exactly from the "
-                 "rows (e.g. a vin, defect_id, wo_number, anomaly_id, fl, lot_id). Do not use outside knowledge. "
+                 "rows (e.g. a vin, defect_id, wo_number, anomaly_id, fl, lot_id, or a count). Citations are the raw "
+                 "values only, never column names. Do not use outside knowledge. "
                  "If the rows do not answer the question, set dont_know=true and return no sentences.")
 
 
@@ -301,7 +411,7 @@ def ask(question: str, provider=None, session=None) -> Answer:
         ans = Answer(question, provider.name)
         system = cypher_prompt(session)
         user = question
-        for attempt in (1, 2):
+        for attempt in range(1, MAX_ATTEMPTS + 1):
             ans.attempts = attempt
             plan = provider.json(system, user, CYPHER_SCHEMA, "cypher_plan")
             if not plan["can_answer"]:
@@ -309,22 +419,24 @@ def ask(question: str, provider=None, session=None) -> Answer:
                 return ans
             try:
                 ans.cypher = validate(plan["cypher"], session)
-                break
             except CypherRejected as exc:
-                ans.cypher = plan["cypher"]
-                user = f"{question}\n\nYour previous query was rejected: {exc}\nQuery was:\n{plan['cypher']}\nFix it."
-                if attempt == 2:
-                    ans.dont_know, ans.reason = True, f"Could not build a valid query ({exc})."
-                    return ans
-        ans.rows = run_read(session, ans.cypher)
+                ans.cypher, problem = plan["cypher"], f"was rejected: {exc}"
+            else:
+                ans.rows = run_read(session, ans.cypher)
+                if ans.rows:
+                    break
+                problem = ("returned 0 rows. Check the relationship directions against RELATIONSHIPS THAT EXIST, "
+                           "use :Asset with fl/asset_type, and use values exactly as listed under VALUES")
+            ans.history.append(f"{plan['cypher']}  -> {problem}")
+            user = f"{question}\n\nYour previous query {problem}\nQuery was:\n{plan['cypher']}\nWrite a corrected query."
         if not ans.rows:
-            ans.dont_know, ans.reason = True, "The graph returned no data for this question."
+            ans.dont_know, ans.reason = True, f"No query returned data after {ans.attempts} attempts."
             return ans
         shown = ans.rows[:ROWS_TO_LLM]
         note = f"\n(Showing {len(shown)} of {len(ans.rows)} rows.)" if len(ans.rows) > len(shown) else ""
         out = provider.json(ANSWER_SYSTEM, f"Question: {question}\nCypher: {ans.cypher}\nRows (JSON):\n"
                             f"{json.dumps(shown, default=str)}{note}", ANSWER_SCHEMA, "grounded_answer")
-        ans.sentences, ans.dropped_sentences = ground(out["sentences"], ans.rows)
+        ans.sentences, ans.dropped_sentences = ground(out["sentences"], ans.rows, ans.cypher)
         if out["dont_know"] or not ans.sentences:
             ans.dont_know, ans.sentences = True, []
             ans.reason = "The query result does not support a cited answer."
@@ -363,7 +475,7 @@ def offline_answer(question: str, session) -> Answer:
         a.cypher = validate(cypher, session)
         a.rows = run_read(session, a.cypher)
         a.sentences = build(a.rows) if a.rows else []
-        a.sentences, a.dropped_sentences = ground(a.sentences, a.rows)
+        a.sentences, a.dropped_sentences = ground(a.sentences, a.rows, a.cypher)
         if not a.sentences:
             a.dont_know, a.reason = True, "The graph returned no data for this question."
         return a
@@ -465,6 +577,10 @@ def report(results: list[tuple], mode: str) -> str:
                 "This proves the validator, read-only execution and citation checks end to end, but it is **not** "
                 "GraphRAG. Set `OPENAI_API_KEY` (or another provider, see the module docstring) and run again to "
                 "evaluate the LLM.", ""]
+    if not mode.startswith("offline"):
+        out += [f"> The Cypher prompt holds the ontology schema, the relationship patterns found in the data, value "
+                f"lists, and {EXAMPLES.count('Q:')} worked examples (see `EXAMPLES` in `graphrag.py`). The examples "
+                "use other entities than these 10 questions but teach the same graph paths.", ""]
     out += ["| # | Question | Expected | Answer | Pass |", "|---:|---|---|---|---|"]
     for i, (q, exp, idk, a, ok) in enumerate(results, 1):
         want = "I don't know" if idk else ", ".join(exp)
@@ -473,6 +589,8 @@ def report(results: list[tuple], mode: str) -> str:
     for i, (q, exp, idk, a, ok) in enumerate(results, 1):
         out += [f"### {i}. {q}", "", f"- Mode {a.mode}, attempts {a.attempts}, rows {len(a.rows)}, "
                 f"sentences dropped for missing/invalid citations: {a.dropped_sentences}"]
+        for h in a.history:
+            out += [f"- Earlier attempt: `{h[:400]}`"]
         if a.cypher:
             out += ["", "```cypher", a.cypher, "```"]
         out += ["", f"**Answer:** {a.text()}", ""]

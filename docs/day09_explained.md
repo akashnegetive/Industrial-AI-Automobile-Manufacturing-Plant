@@ -50,8 +50,12 @@ A prompt that says "don't write data" can be ignored by the model. So `validate(
 Property names, aliases and map keys that look like keywords (`p.start AS start`) are allowed. That was a real
 bug found while building: the first version rejected `ORDER BY start`.
 
-Rejected queries get **one retry**, with the error message sent back to the LLM ("unknown property
-film_thickness"). That fixes most small mistakes without loops.
+The validator also checks **relationship directions** against the ontology: `(Defect)<-[:causedBy]-(Equipment)`
+is rejected with "causedBy goes (Defect)-[:causedBy]->(…). Check the arrow direction."
+
+A rejected query, or one that returns **0 rows**, is sent back to the LLM with the reason (up to **3 attempts**).
+0 rows usually means a wrong guess (wrong direction, `Equipment` instead of `Component`, a misspelt code), not
+"the answer is nothing". Rejected attempts are listed in the report.
 
 ## "No citation, no claim" and "I don't know"
 
@@ -72,13 +76,21 @@ shift supervisor (not in the data). Answering those with a guess counts as a fai
 - Real values read from the graph: defect codes, defect families, anomaly verdicts, work-order types,
   line FLs. Without these the model guesses `defect_type = 'leak'` and gets 0 rows.
 
-About 5,400 characters, so the cost per question is tiny.
+- **The relationship patterns that really exist in the data, with counts** (computed from the live graph), e.g.
+  `(:Defect)-[:causedBy]->(:AnomalyEvent) 212`. The ontology says what is *allowed*; this says what is *there*.
+- **Six worked examples** (question → Cypher) for the main paths: defect → anomaly → equipment → work order,
+  defects on a day with lot and anomaly, lot → vehicles, vehicle → processedBy robots, the asset hierarchy →
+  sensors, anomaly verdicts, plus one "can_answer=false". They use **other** entities than the 10 evaluation
+  questions (no evaluation answer appears in the prompt) and every example is tested: it must pass the validator
+  and return rows.
+
+About 11,000 characters, roughly 3,000 tokens: still a fraction of a cent per question.
 
 ## Providers
 
 | `DDN_LLM` | Needs | Model (`DDN_LLM_MODEL`) |
 |---|---|---|
-| `openai` (main) | `OPENAI_API_KEY` | `gpt-4o-mini` by default |
+| `openai` (main) | `OPENAI_API_KEY` | `gpt-4o` by default |
 | `anthropic` | `ANTHROPIC_API_KEY` | `claude-opus-5-5` |
 | `ollama` | Ollama running locally | `qwen2.5-coder:7b` |
 | `offline` | nothing | no LLM |
@@ -91,6 +103,24 @@ schema the model must follow), so the code never parses free text. OpenAI: `resp
 report says so. It exists so `run_all` and the tests work without a key, and it proves the validator, read-only
 execution and grounding work end to end. If the LLM call fails during `run_all` (bad key, no credit), it
 falls back to offline and the report says why.
+
+## First real run, and what it taught
+
+The first laptop run with **gpt-4o-mini** scored **2/10**: only the two "I don't know" questions passed. The
+report showed why, which is exactly what the report is for:
+
+| What went wrong | Example from the report | Fix |
+|---|---|---|
+| Gave up too early: said the schema can't explain causes | Q1, Q3, Q6, Q8: `can_answer=false` | Rule: causes ARE in the graph (`causedBy`, `judged`, lots); only say "can't" when the *kind* of data is missing |
+| Wrong arrow direction / invented paths | `(d:Defect)<-[:causedBy]-(e:Equipment)`, `(AnomalyEvent)-[:hasTimeSeries]->` | Direction check in the validator + live patterns in the prompt |
+| Guessed Equipment vs Component vs Tool | Q7: `processedBy->(t:Tool)` | Use `:Asset` + `asset_type`; list the asset types |
+| One wrong query = give up | Q2, Q4, Q7: 0 rows | Retry on 0 rows (3 attempts) |
+| Right answer thrown away | Q5: 1 row with 1,785, but the sentence cited the lot ID, which was only in the `WHERE` | Values the query filtered on can be cited when rows come back; `1,785` = `1785` |
+| Small model | – | Default model now `gpt-4o` |
+
+Note what did **not** happen: no wrong answer got through. The two questions with no answer in the data gave
+"I don't know", and every failure was "I don't know", never an invented fact. The safety design held; the
+prompt was too thin.
 
 ## Results (`reports/14_graphrag.md`)
 
@@ -115,8 +145,8 @@ you can see whether the schema prompt or the model was the problem.
 
 - `src/ddn/graphrag.py`: providers, `validate`, `run_read`, `ground`, `ask`, offline templates, evaluation.
 - `apps/ask_app.py`: Streamlit question screen (answer, citations, Cypher, rows), for the demo.
-- `tests/test_day9.py`: 18 tests. The LLM is a scripted fake, so it's tested with no key. The tests cover: 8
-  kinds of write/procedure attack, an unknown label, relationship or property, keyword-like aliases, a
+- `tests/test_day9.py`: 24 tests. The LLM is a scripted fake, so it's tested with no key. The tests cover: 8
+  kinds of write/procedure attack, an unknown label, relationship or property, wrong arrow directions, citing counts and filter values, the prompt examples, keyword-like aliases, a
   rejected-then-retried query, an invented citation being dropped, "can't answer", 0 rows, the full
   evaluation and the screen.
 

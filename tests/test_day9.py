@@ -51,6 +51,37 @@ def test_sentences_without_valid_citations_are_dropped():
     assert [s["text"] for s in kept] == ["RB07 caused it."] and dropped == 3
 
 
+@pytest.mark.parametrize("q", [
+    "MATCH (d:Defect)<-[:causedBy]-(e:Equipment) RETURN e.fl",                    # arrow the wrong way
+    "MATCH (a:AnomalyEvent)-[:hasTimeSeries]->(t:TimeSeries) RETURN t.tag",        # wrong start label
+    "MATCH (v:Vehicle) MATCH (l:SupplierLot)<-[:containsPart]-(v) RETURN v.vin",   # label known from earlier
+])
+def test_relationships_must_follow_the_ontology_direction(q):
+    with pytest.raises(G.CypherRejected, match="direction"):
+        G.validate(q)
+
+
+def test_right_directions_and_asset_label_pass():
+    G.validate("MATCH (d:Defect)-[:causedBy]->(e:AnomalyEvent)<-[:hasEvent]-(eq:Asset) RETURN eq.fl, e.anomaly_id")
+    G.validate("MATCH (a:Asset)-[:partOf*0..4]->(:Asset {fl: 'X'}) MATCH (a)-[:hasTimeSeries]->(t:TimeSeries) RETURN t.tag")
+
+
+def test_counts_and_matched_filter_values_can_be_cited():
+    rows = [{"vehicle_count": 1785}]
+    cypher = "MATCH (l:SupplierLot {lot_id: 'WS-260904-B'})<-[:fromLot]-(:Part)<-[:containsPart]-(v) RETURN count(v)"
+    kept, _ = G.ground([{"text": "1,785 vehicles got lot WS-260904-B.", "citations": ["1,785", "WS-260904-B"]}],
+                       rows, cypher)
+    assert len(kept) == 1
+    assert G.ground([{"text": "x", "citations": ["WS-260904-B"]}], [], cypher)[0] == []   # no rows, no citing
+
+
+@NEO
+def test_prompt_examples_are_valid_and_return_data():
+    with graph.driver() as d, d.session() as s:
+        for block in [b.split("\n", 1)[1] for b in G.EXAMPLES.split("\n\n") if "\nMATCH" in b]:
+            assert G.run_read(s, G.validate(block, s)), block
+
+
 def test_last_tuesday_is_8_september():
     assert G.parse_day("last Tuesday").isoformat() == "2026-09-08"
     assert G.parse_day("on 10 September").isoformat() == "2026-09-10"
@@ -93,10 +124,11 @@ def test_model_says_cannot_answer_gives_i_dont_know():
 
 @NEO
 def test_empty_result_gives_i_dont_know_without_asking_the_llm_to_guess():
-    llm = FakeLLM([{"can_answer": True, "reason": "", "cypher": "MATCH (v:Vehicle {vin: 'NOPE'}) RETURN v.vin"}],
-                  {"dont_know": False, "sentences": [{"text": "made up", "citations": ["NOPE"]}]})
+    empty = {"can_answer": True, "reason": "", "cypher": "MATCH (v:Vehicle {vin: 'NOPE'}) RETURN v.vin"}
+    llm = FakeLLM([empty] * G.MAX_ATTEMPTS, {"dont_know": False, "sentences": [{"text": "made up", "citations": ["NOPE"]}]})
     a = G.ask("Tell me about vehicle NOPE", llm)
-    assert a.dont_know and len(llm.prompts) == 1          # the answer step was never called
+    assert a.dont_know and len(llm.prompts) == G.MAX_ATTEMPTS        # retried, but the answer step never ran
+    assert "0 rows" in llm.prompts[1]
 
 
 @NEO
