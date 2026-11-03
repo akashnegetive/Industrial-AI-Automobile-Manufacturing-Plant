@@ -41,6 +41,9 @@ if question:
     if a.cypher:
         with st.expander("Cypher (validated, run read-only)"):
             st.code(a.cypher, language="cypher")
+    if a.context:
+        with st.expander(f"Related facts added from the graph ({len(a.context)})"):
+            st.dataframe(pd.DataFrame(a.context).astype(str), hide_index=True, width="stretch")
     if a.rows:
         with st.expander(f"Rows returned ({len(a.rows)})"):
             st.dataframe(pd.DataFrame(a.rows).astype(str), hide_index=True, width="stretch")

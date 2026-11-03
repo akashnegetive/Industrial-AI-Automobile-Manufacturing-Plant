@@ -243,9 +243,10 @@ ORDER BY edges DESC
 | relationship | method | edges | min_conf | max_conf |
 |---|---|---|---|---|
 | passedThrough | inferred | 271 | 0.6 | 0.6 |
+| causedBy | derived | 85 | 0.75 | 0.75 |
 | hasEvent | ml | 1 | 0.6 | 0.6 |
 
-- Edges below 0.8: passedThrough/inferred 271, hasEvent/ml 1. Inferred RFID passages right after a buffer (P-INS, T1-01) get 0.60 because their validated timing error is large (see report 10); every matcher link in the graph is at or above its auto-accept threshold.
+- Edges below 0.8: passedThrough/inferred 271, causedBy/derived 85, hasEvent/ml 1. Inferred RFID passages right after a buffer (P-INS, T1-01) get 0.60 because their validated timing error is large (see report 10); every matcher link in the graph is at or above its auto-accept threshold.
 
 ## D7. Plant head: how many cars built in these two weeks carry a known risk, and how many of them did inspection catch?
 

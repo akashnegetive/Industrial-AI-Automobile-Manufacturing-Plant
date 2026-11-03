@@ -242,6 +242,45 @@ def _plain(v):
     return v
 
 
+# ------------------------------------------------------------ evidence expansion
+def _scalars(rows) -> set[str]:
+    out = set()
+    def walk(v):
+        if isinstance(v, dict):
+            for x in v.values():
+                walk(x)
+        elif isinstance(v, list):
+            for x in v:
+                walk(x)
+        elif isinstance(v, str):
+            out.add(v)
+    walk(rows)
+    return out
+
+
+def expand(session, rows: list[dict]) -> list[dict]:
+    """Add the one-hop context the LLM's query may have left out, by fixed (not LLM-written) queries:
+    for an anomaly, the asset it happened on and its work order; for a lot, the defects attributed to it.
+    The answer is then grounded on rows + context."""
+    vals = _scalars(rows)
+    anomalies = sorted(v for v in vals if re.fullmatch(r"AN-\d{3}", v))
+    lots = sorted(vals & {r["l"] for r in session.run("MATCH (:Defect)-[:causedBy]->(l:SupplierLot) "
+                                                       "RETURN DISTINCT l.lot_id AS l")})
+    ctx = []
+    if anomalies:
+        ctx += run_read(session, f"""MATCH (e:AnomalyEvent) WHERE e.anomaly_id IN {anomalies}
+OPTIONAL MATCH (eq:Asset)-[:hasEvent]->(e)
+OPTIONAL MATCH (w:WorkOrder {{wo_number: e.confirming_wo}})
+RETURN 'anomaly' AS context, e.anomaly_id AS anomaly_id, eq.fl AS fl, eq.asset_type AS asset_type,
+       e.judged AS judged, w.wo_number AS wo_number, w.short_text AS wo_text""")
+    if lots:
+        ctx += run_read(session, f"""MATCH (d:Defect)-[c:causedBy]->(l:SupplierLot) WHERE l.lot_id IN {lots}
+RETURN 'supplier lot root cause' AS context, l.lot_id AS lot_id, l.part_no AS part_no, l.supplier AS supplier,
+       d.defect_code AS defect_code, count(d) AS defects_attributed, head(collect(c.evidence)) AS evidence,
+       head(collect(c.status)) AS status""")
+    return ctx
+
+
 # ----------------------------------------------------------------- grounding
 def _norm(v) -> str:
     s = str(v).strip().strip("`'\"").lower()
@@ -298,7 +337,8 @@ class Answer:
     reason: str = ""
     dropped_sentences: int = 0
     attempts: int = 0
-    history: list[str] = field(default_factory=list)          # rejected / empty queries before the final one
+    history: list[str] = field(default_factory=list)
+    context: list[dict] = field(default_factory=list)         # facts added by expand(), not by the LLM's query          # rejected / empty queries before the final one
 
     def text(self) -> str:
         if self.dont_know:
@@ -352,8 +392,8 @@ Q: Why were there so many alignment defects on 3 September?
 MATCH (v:Vehicle)-[:hasDefect]->(d:Defect)
 WHERE d.defect_family = 'alignment' AND date(d.detected_at) = date('2026-09-03')
 OPTIONAL MATCH (d)-[:causedBy]->(e:AnomalyEvent)
-OPTIONAL MATCH (v)-[:containsPart]->(p:Part)-[:fromLot]->(l:SupplierLot)
-RETURN d.defect_code AS defect_code, p.part_no AS part_no, l.lot_id AS lot_id, e.anomaly_id AS anomaly_id,
+OPTIONAL MATCH (d)-[:causedBy]->(l:SupplierLot)
+RETURN d.defect_code AS defect_code, l.lot_id AS lot_id, e.anomaly_id AS anomaly_id,
        count(DISTINCT d) AS defects, collect(DISTINCT d.defect_id)[..5] AS defect_ids ORDER BY defects DESC
 
 Q: How many vehicles got a battery from lot BT-260902-A, per day?
@@ -402,15 +442,17 @@ def cypher_prompt(session) -> str:
             "exists only for paint-shop lines. 'Line N' on its own means body line N (DDN1-BIW-LN).\n"
             "- Use a different variable name for every node. When you fix a query, keep the dates and values "
             "taken from the question.\n"
-            "- Causes ARE in the graph: Defect-[:causedBy]->AnomalyEvent, AnomalyEvent.judged / reason / "
-            "confirming_wo, and supplier lots via Vehicle-[:containsPart]->Part-[:fromLot]->SupplierLot. For a "
+            "- Causes ARE in the graph: Defect-[:causedBy]->AnomalyEvent (AnomalyEvent.judged / reason / "
+            "confirming_wo) and Defect-[:causedBy]->SupplierLot (a bad supplier lot). For a "
             "'why' question, return that evidence.\n"
             "- Set can_answer=false ONLY when the question needs a kind of data that is not in the schema at all "
             "(people, costs, measurements that are not listed properties). Otherwise always try a query. "
             "Time-series values are not in the graph (only the latest_value).")
 
 
-ANSWER_SYSTEM = ("You answer a plant engineer's question using ONLY the query result rows given. Write short "
+ANSWER_SYSTEM = ("You answer a plant engineer's question using ONLY the query result rows and related facts given. "
+                 "A lot with a 'supplier lot root cause' fact explains its defects; a status 'suggested' means it is "
+                 "a hypothesis, say so. Write short "
                  "sentences. Every sentence must cite at least one identifier or value copied exactly from the "
                  "rows (e.g. a vin, defect_id, wo_number, anomaly_id, fl, lot_id, or a count). Name the supporting "
                  "evidence the rows contain (anomaly_id, wo_number, lot_id, fl) in your sentences. Citations are the raw "
@@ -451,11 +493,14 @@ def ask(question: str, provider=None, session=None) -> Answer:
         if not ans.rows:
             ans.dont_know, ans.reason = True, f"No query returned data after {ans.attempts} attempts."
             return ans
+        ans.context = expand(session, ans.rows)
         shown = ans.rows[:ROWS_TO_LLM]
         note = f"\n(Showing {len(shown)} of {len(ans.rows)} rows.)" if len(ans.rows) > len(shown) else ""
+        ctx = (f"\nRelated facts from the graph (JSON):\n{json.dumps(ans.context, default=str)}"
+               if ans.context else "")
         out = provider.json(ANSWER_SYSTEM, f"Question: {question}\nCypher: {ans.cypher}\nRows (JSON):\n"
-                            f"{json.dumps(shown, default=str)}{note}", ANSWER_SCHEMA, "grounded_answer")
-        ans.sentences, ans.dropped_sentences = ground(out["sentences"], ans.rows, ans.cypher)
+                            f"{json.dumps(shown, default=str)}{note}{ctx}", ANSWER_SCHEMA, "grounded_answer")
+        ans.sentences, ans.dropped_sentences = ground(out["sentences"], ans.rows + ans.context, ans.cypher)
         if out["dont_know"] or not ans.sentences:
             ans.dont_know, ans.sentences = True, []
             ans.reason = "The query result does not support a cited answer."
@@ -607,7 +652,7 @@ def report(results: list[tuple], mode: str) -> str:
     out += ["", "## Details", ""]
     for i, (q, exp, idk, a, ok) in enumerate(results, 1):
         out += [f"### {i}. {q}", "", f"- Mode {a.mode}, attempts {a.attempts}, rows {len(a.rows)}, "
-                f"sentences dropped for missing/invalid citations: {a.dropped_sentences}"]
+                f"context rows added: {len(a.context)}, sentences dropped for missing/invalid citations: {a.dropped_sentences}"]
         for h in a.history:
             out += [f"- Earlier attempt: `{h[:400]}`"]
         if a.cypher:

@@ -132,6 +132,22 @@ prompt was too thin.
 
 The scoring stayed strict: Q4 still needs the evidence ID, not only the right asset.
 
+### Third run: 8/10, and the two misses were missing *evidence*, not bad Cypher
+
+| Miss | Why | Fix |
+|---|---|---|
+| Q1 water leaks | The query was right (45 rows: lots of every part on the leaking cars). The model said "I don't know" because battery, windshield and seat lots looked just as common. That's honest: **the graph had no edge saying the door-seal lot is a cause.** Part B found it, but it was never loaded | Load `Defect-[:causedBy]->SupplierLot` (85 edges, `method=derived`, `status=suggested`) |
+| Q3 craters | Right anomaly and WO, but the query didn't return the asset (AHU-TC2) | **Evidence expansion**: after the LLM's query, fixed queries add the asset + work order of every anomaly in the rows and the root-cause facts of every lot in the rows ("Related facts" in the screen) |
+
+Why the lot rule needs domain knowledge: a purely statistical rule ("lot with ≥ 3× the defects of the next lot")
+also flags the battery, tyre and seat lots of the same days, because a short burst of defects falls into one
+lot of *every* part. The fix is a defect → part map (`DEFECT_PART` in `graph.py`): WL-104 is a leak at the front
+door upper edge, where the door seal sits. Only then is the concentration test applied. The result is a
+hypothesis (`status=suggested`), and the answer has to say so.
+
+Evidence expansion is safe because those queries are fixed code, not LLM-written, and the answer is still
+grounded: citations must appear in rows + added facts.
+
 ## Results (`reports/14_graphrag.md`)
 
 | # | Question | Expected |
@@ -155,7 +171,7 @@ you can see whether the schema prompt or the model was the problem.
 
 - `src/ddn/graphrag.py`: providers, `validate`, `run_read`, `ground`, `ask`, offline templates, evaluation.
 - `apps/ask_app.py`: Streamlit question screen (answer, citations, Cypher, rows), for the demo.
-- `tests/test_day9.py`: 26 tests. The LLM is a scripted fake, so it's tested with no key. The tests cover: 8
+- `tests/test_day9.py`: 28 tests. The LLM is a scripted fake, so it's tested with no key. The tests cover: 8
   kinds of write/procedure attack, an unknown label, relationship or property, wrong arrow directions, citing counts and filter values, the prompt examples, keyword-like aliases, a
   rejected-then-retried query, an invented citation being dropped, "can't answer", 0 rows, the full
   evaluation and the screen.

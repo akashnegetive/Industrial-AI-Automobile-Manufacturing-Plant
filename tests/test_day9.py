@@ -158,3 +158,17 @@ def test_an_id_inside_a_text_value_can_be_cited_but_not_a_fragment():
     kept, dropped = G.ground([{"text": "WO 4102963 fixed it.", "citations": ["AN-006", "4102963"]},
                               {"text": "part of a number", "citations": ["4102"]}], rows)
     assert len(kept) == 1 and dropped == 1
+
+
+def test_supplier_lot_cause_is_only_the_door_seal_lot():
+    lc = graph.supplier_lot_causes()
+    assert set(lc.lot_id) == {"WS-260904-B"} and len(lc) == 85
+
+
+@NEO
+def test_expand_adds_asset_and_work_order_of_an_anomaly_and_the_lot_cause():
+    with graph.driver() as d, d.session() as s:
+        ctx = G.expand(s, [{"anomaly_id": "AN-006"}, {"lot_id": "WS-260904-B"}, {"lot_id": "BT-260904-A"}])
+    assert {"fl": "DDN1-PNT-AHU-AHUTC2", "wo_number": "4102963"}.items() <= next(
+        c for c in ctx if c["context"] == "anomaly").items()
+    assert [c["lot_id"] for c in ctx if c["context"] == "supplier lot root cause"] == ["WS-260904-B"]

@@ -45,7 +45,7 @@ git pull                                     # get the day's work
 | 6 | 12 | 48 | `drawings: 145 labels ... (OCR used)` (130 without Tesseract), `passages 316,794 (6,332 inferred)` |
 | 7 | 14 | 56 | `graph: 165,698 nodes, 1,133,743 rels ... missing provenance 0`, `7 queries` — **without Docker/Neo4j: 12 steps, 53 passed, 3 skipped** |
 | 8 | 15 | 63 | `anomalies: 8 events (true_positive_quality 5, ...)`, `graph: 165,706 nodes, 1,136,926 rels` — **without Docker/Neo4j: 13 steps, 59 passed, 4 skipped** |
-| 9 | 16 | 89 | `graphrag (openai): n/10` (with your key) or `graphrag (offline): 10/10` (no key) — **without Docker/Neo4j: 13 steps, 79 passed, 10 skipped** |
+| 9 | 16 | 91 | `graph: 165,706 nodes, 1,137,011 rels`, `graphrag (openai): n/10` (with your key) or `graphrag (offline): 10/10` (no key) — **without Docker/Neo4j: 13 steps, 80 passed, 11 skipped** |
 
 If your numbers differ from this table, or a step fails, paste the last ~30 lines of the output into the chat.
 

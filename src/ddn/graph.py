@@ -371,8 +371,37 @@ def load_graph() -> dict:
                       evidence="defect " + cb.defect_code + " over-represented on vehicles exposed to " + cb.anomaly_id)
             counts["causedBy"] = edges(s, "causedBy", cb, ("Defect", "defect_id", "defect_id"),
                                        ("AnomalyEvent", "anomaly_id", "anomaly_id"))
+        # ---- supplier-lot root causes (no sensor signal: found through part genealogy, Part B)
+        lc = supplier_lot_causes()
+        if len(lc):
+            lc = prov(lc, "PIPELINE", "derived", 0.75, status="suggested", evidence=lc.evidence)
+            counts["causedBy(lot)"] = edges(s, "causedBy", lc, ("Defect", "defect_id", "defect_id"),
+                                            ("SupplierLot", "lot_id", "lot_id"))
     counts["_seconds"] = round(time.time() - t0)
     return counts
+
+
+# A lot can only cause a defect at the place where its part sits. Pure statistics can't decide this: a
+# short burst of defects falls into one lot of EVERY part built in that window (battery, tyres, seats...).
+DEFECT_PART = {"WL-104": "DOOR_SEAL"}          # water leak, front door upper edge = where the door seal sits
+
+
+def supplier_lot_causes(min_cases: int = 10, min_ratio: float = 3.0) -> pd.DataFrame:
+    """Defect -> SupplierLot hypotheses: for each defect code with a known part, the lot with the most
+    defective vehicles, if it has >= min_cases and >= min_ratio x the next lot of the same part."""
+    g, d = load("part_lot_genealogy.csv.gz"), load("quality_defects.csv")
+    out = []
+    for code, part in DEFECT_PART.items():
+        m = d[d.defect_code == code].merge(g[g.part_no == part][["vin", "lot_id"]], on="vin")
+        per_lot = m.groupby("lot_id").vin.nunique().sort_values(ascending=False)
+        if per_lot.empty:
+            continue
+        n1, n2 = per_lot.iloc[0], (per_lot.iloc[1] if len(per_lot) > 1 else 0)
+        if n1 >= min_cases and n1 >= min_ratio * max(n2, 1):
+            hit = m[m.lot_id == per_lot.index[0]]
+            out.append(hit[["defect_id", "lot_id"]].assign(
+                evidence=f"{code} on {n1} vehicles with {part} lot {per_lot.index[0]}; next lot {n2}"))
+    return pd.concat(out, ignore_index=True) if out else pd.DataFrame(columns=["defect_id", "lot_id", "evidence"])
 
 
 # --------------------------------------------------------------- validation
