@@ -122,6 +122,16 @@ Note what did **not** happen: no wrong answer got through. The two questions wit
 "I don't know", and every failure was "I don't know", never an invented fact. The safety design held; the
 prompt was too thin.
 
+### Second run: gpt-4o with the better prompt, 7/10
+
+| Miss | Why (from the report) | Fix |
+|---|---|---|
+| Q1 water leaks, Line 2 | Joined `(v)-[:passedThrough]->(:Line {fl:'DDN1-BIW-L2'})`, but vehicles pass the body line's **stations**; passedThrough to a Line exists only in the paint shop. The 3rd attempt also reused `l` for both Line and SupplierLot, and changed the date | Prompt rule "a vehicle went through a line if it passed one of its stations"; the validator rejects one variable used for two node types; retries must keep the question's dates |
+| Q3 craters | Query returned the anomaly but not its asset; the model cited the WO number, which was only inside the `reason` text, so the sentence was dropped | Rule: with an AnomalyEvent, always return its asset and work order. An ID that appears as a whole word inside a text value of the rows can be cited (a fragment like `4102` of `4102963` can't) |
+| Q4 nutrunner | Right answer (NR14), but it didn't name the anomaly AN-002 that was in the rows | Answer prompt: name the supporting evidence (anomaly_id, wo_number, lot_id) |
+
+The scoring stayed strict: Q4 still needs the evidence ID, not only the right asset.
+
 ## Results (`reports/14_graphrag.md`)
 
 | # | Question | Expected |
@@ -145,7 +155,7 @@ you can see whether the schema prompt or the model was the problem.
 
 - `src/ddn/graphrag.py`: providers, `validate`, `run_read`, `ground`, `ask`, offline templates, evaluation.
 - `apps/ask_app.py`: Streamlit question screen (answer, citations, Cypher, rows), for the demo.
-- `tests/test_day9.py`: 24 tests. The LLM is a scripted fake, so it's tested with no key. The tests cover: 8
+- `tests/test_day9.py`: 26 tests. The LLM is a scripted fake, so it's tested with no key. The tests cover: 8
   kinds of write/procedure attack, an unknown label, relationship or property, wrong arrow directions, citing counts and filter values, the prompt examples, keyword-like aliases, a
   rejected-then-retried query, an invented citation being dropped, "can't answer", 0 rows, the full
   evaluation and the screen.

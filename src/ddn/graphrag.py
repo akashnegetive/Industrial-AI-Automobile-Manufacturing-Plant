@@ -199,11 +199,15 @@ def check_directions(bare: str, o) -> None:
     itself or from where the same variable was labelled elsewhere in the query; :Asset is not checked."""
     known: dict[str, set[str]] = {}
     for var, lab in re.findall(r"\(\s*(\w+)\s*:\s*([\w|:&]+)", bare):
-        known.setdefault(var, set()).update(x for x in re.split(r"[|:&]", lab) if x)
+        these = {x for x in re.split(r"[|:&]", lab) if x} - {"Asset"}
+        if these and known.get(var) and not these & known[var]:
+            raise CypherRejected(f"variable '{var}' is used for two different node types "
+                                 f"({'|'.join(sorted(known[var]))} and {'|'.join(sorted(these))}); use another name")
+        known.setdefault(var, set()).update(these)
 
     def labels(var, lab):
-        out = {x for x in re.split(r"[|:&]", lab or "") if x} or known.get(var, set())
-        return out - {"Asset"}
+        out = {x for x in re.split(r"[|:&]", lab or "") if x} - {"Asset"}
+        return out or known.get(var, set())
 
     for m in HOP.finditer(bare):
         lv, ll, left_arrow, rel, right_arrow, rv, rl = m.groups()
@@ -267,9 +271,15 @@ def citable(rows: list[dict], cypher: str | None = None) -> set[str]:
 def ground(sentences: list[dict], rows: list[dict], cypher: str | None = None) -> tuple[list[dict], int]:
     """Keep only sentences whose citations all appear in the rows (and that cite at least one)."""
     ok_ids = citable(rows, cypher)
+    texts = " ".join(v for v in ok_ids if " " in v)          # longer text values, e.g. an anomaly's reason
+
+    def found(c) -> bool:
+        c = _norm(c)
+        return c in ok_ids or (len(c) >= 4 and re.search(rf"(?<![\w-]){re.escape(c)}(?![\w-])", texts) is not None)
+
     kept, dropped = [], 0
     for s in sentences:
-        cites = [c for c in s.get("citations", []) if _norm(c) in ok_ids]
+        cites = [c for c in s.get("citations", []) if found(c)]
         if cites and len(cites) == len(s.get("citations", [])):
             kept.append({"text": s["text"], "citations": cites})
         else:
@@ -385,6 +395,13 @@ def cypher_prompt(session) -> str:
             "- MATCH / OPTIONAL MATCH / WHERE / WITH / RETURN / ORDER BY / LIMIT only. Never write data.\n"
             "- Write values inline as literals. Dates: date(x.detected_at) = date('2026-09-08').\n"
             "- RETURN identifiers (vin, defect_id, wo_number, anomaly_id, fl, lot_id, tag) and use AS aliases.\n"
+            "- When an AnomalyEvent is involved, also return the asset it happened on, (eq:Asset)-[:hasEvent]->(e) "
+            "as fl, and its work order (w:WorkOrder {wo_number: e.confirming_wo}) as wo_number.\n"
+            "- A vehicle went through a line if it passed one of the line's stations: "
+            "(v)-[:passedThrough]->(s:Station) WHERE s.fl STARTS WITH 'DDN1-BIW-L2'. passedThrough to a :Line "
+            "exists only for paint-shop lines. 'Line N' on its own means body line N (DDN1-BIW-LN).\n"
+            "- Use a different variable name for every node. When you fix a query, keep the dates and values "
+            "taken from the question.\n"
             "- Causes ARE in the graph: Defect-[:causedBy]->AnomalyEvent, AnomalyEvent.judged / reason / "
             "confirming_wo, and supplier lots via Vehicle-[:containsPart]->Part-[:fromLot]->SupplierLot. For a "
             "'why' question, return that evidence.\n"
@@ -395,7 +412,8 @@ def cypher_prompt(session) -> str:
 
 ANSWER_SYSTEM = ("You answer a plant engineer's question using ONLY the query result rows given. Write short "
                  "sentences. Every sentence must cite at least one identifier or value copied exactly from the "
-                 "rows (e.g. a vin, defect_id, wo_number, anomaly_id, fl, lot_id, or a count). Citations are the raw "
+                 "rows (e.g. a vin, defect_id, wo_number, anomaly_id, fl, lot_id, or a count). Name the supporting "
+                 "evidence the rows contain (anomaly_id, wo_number, lot_id, fl) in your sentences. Citations are the raw "
                  "values only, never column names. Do not use outside knowledge. "
                  "If the rows do not answer the question, set dont_know=true and return no sentences.")
 
@@ -426,7 +444,8 @@ def ask(question: str, provider=None, session=None) -> Answer:
                 if ans.rows:
                     break
                 problem = ("returned 0 rows. Check the relationship directions against RELATIONSHIPS THAT EXIST, "
-                           "use :Asset with fl/asset_type, and use values exactly as listed under VALUES")
+                           "use :Asset with fl/asset_type, use values exactly as listed under VALUES, and "
+                           "drop filters that are not needed. Keep the dates from the question")
             ans.history.append(f"{plan['cypher']}  -> {problem}")
             user = f"{question}\n\nYour previous query {problem}\nQuery was:\n{plan['cypher']}\nWrite a corrected query."
         if not ans.rows:

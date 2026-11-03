@@ -144,3 +144,17 @@ def test_ask_screen_renders_an_answer(monkeypatch):
     at = AppTest.from_file("../apps/ask_app.py", default_timeout=60).run()
     at.text_input[0].input("How many vehicles received parts from supplier lot WS-260904-B?").run()
     assert not at.exception and any("1785" in m.value for m in at.markdown)
+
+
+def test_one_variable_for_two_node_types_is_rejected():
+    with pytest.raises(G.CypherRejected, match="two different node types"):
+        G.validate("MATCH (v:Vehicle)-[:passedThrough]->(l:Line) "
+                   "OPTIONAL MATCH (v)-[:containsPart]->(:Part)-[:fromLot]->(l:SupplierLot) RETURN l.lot_id")
+    G.validate("MATCH (a:Asset:Equipment)-[:hasEvent]->(e:AnomalyEvent) MATCH (a:Asset) RETURN a.fl")
+
+
+def test_an_id_inside_a_text_value_can_be_cited_but_not_a_fragment():
+    rows = [{"anomaly_id": "AN-006", "reason": "Crater (PD-020) on exposed cars; WO 4102963: AHU TC2 valve stuck"}]
+    kept, dropped = G.ground([{"text": "WO 4102963 fixed it.", "citations": ["AN-006", "4102963"]},
+                              {"text": "part of a number", "citations": ["4102"]}], rows)
+    assert len(kept) == 1 and dropped == 1
