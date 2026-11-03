@@ -172,3 +172,9 @@ def test_expand_adds_asset_and_work_order_of_an_anomaly_and_the_lot_cause():
     assert {"fl": "DDN1-PNT-AHU-AHUTC2", "wo_number": "4102963"}.items() <= next(
         c for c in ctx if c["context"] == "anomaly").items()
     assert [c["lot_id"] for c in ctx if c["context"] == "supplier lot root cause"] == ["WS-260904-B"]
+
+
+def test_no_evaluation_answer_is_written_into_the_prompt_examples():
+    answers = {e for _, exp, _ in G.EVAL + G.HOLDOUT for e in exp}
+    leaked = {a for a in answers if a in G.EXAMPLES}
+    assert not leaked, leaked

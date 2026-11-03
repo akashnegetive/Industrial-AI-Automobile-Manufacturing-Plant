@@ -148,6 +148,21 @@ hypothesis (`status=suggested`), and the answer has to say so.
 Evidence expansion is safe because those queries are fixed code, not LLM-written, and the answer is still
 grounded: citations must appear in rows + added facts.
 
+### Fourth run: 10/10, and why there is a held-out set
+
+| Run | Change | Score |
+|---|---|---:|
+| 1 | gpt-4o-mini, schema-only prompt | 2/10 |
+| 2 | gpt-4o, live patterns, examples, direction check, retry on 0 rows | 7/10 |
+| 3 | station rule, variable check, anomaly context rule, citing inside text | 8/10 |
+| 4 | supplier-lot root cause in the graph, evidence expansion | 10/10 |
+
+**Careful with the 10/10:** the prompt was tuned by looking at failures on these same 10 questions, so the score
+is optimistic (the same problem as tuning a model on its test set). That's why `HOLDOUT` has 5 more questions
+(roof-ditch leaks, the e-coat sensor fault, the AHU-TC1 fan, vehicles exposed to AN-003, and one "I don't know").
+They were written after the tuning and are never used to change the prompt; the report scores them separately.
+A test also checks that no expected answer appears in the prompt examples.
+
 ## Results (`reports/14_graphrag.md`)
 
 | # | Question | Expected |
