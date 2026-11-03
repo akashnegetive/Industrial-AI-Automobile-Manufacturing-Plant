@@ -42,4 +42,8 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | D Neo4j graph: 165,698 nodes, 1.13 M edges, provenance on every edge | done | `reports/11_graph_load.md` |
 | D Seven graph queries (Cypher) | done | `reports/12_graph_queries.md` |
 | E1 Anomaly detection: 8/8 signal problems, judged (5 quality, 1 equipment, 1 sensor fault, 1 false alarm), in the graph | done | `reports/13_anomalies.md` |
+| Report (11 pages, Part A + design + metrics + limitations + real-plant changes + query appendix) | done | `report/REPORT.pdf` (source `report/REPORT.md`, build `python report/build.py`) |
+| Data profiling notebook | done | `notebooks/01_data_profiling.ipynb` |
+| Hidden-test predictions (all records, with confidence and band) | done | `outputs/predictions_*.csv` |
+| Demo helper + 5-minute video script | done | `python -m ddn.demo tag` / `vin`, `docs/DEMO_SCRIPT.md` |
 | E2 GraphRAG: question → validated read-only Cypher → cited answer; 10/10 tuned, 5/5 on unseen held-out questions (gpt-4o) | done | `src/ddn/graphrag.py`, `apps/ask_app.py`, `reports/14_graphrag.md` |

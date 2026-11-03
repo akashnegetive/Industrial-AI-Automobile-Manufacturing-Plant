@@ -15,3 +15,4 @@ pytesseract
 neo4j
 streamlit
 openai
+ipykernel

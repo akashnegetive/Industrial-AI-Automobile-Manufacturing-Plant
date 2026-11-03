@@ -150,12 +150,17 @@ def approved_links(kind: str, key: str, rules_file: str) -> pd.DataFrame:
     rules = pd.read_parquet(STAGING / rules_file)
     auto = links[links.band == "auto_accept"].copy()
     auto["method"] = link_method(auto, rules, key).values
+    rule_m = rules.set_index(key).method.reindex(auto[key]).fillna("none").values
+    auto["evidence"] = np.where(auto.method == "ml", "ML only (rules disagreed or found nothing)",
+                                "rules (" + rule_m + ") and ML agree") + \
+        " | ML p=" + auto.confidence.round(3).astype(str)
     eng = engineer_labels(kind)
     decided = set(load_decisions().query("kind == @kind").record)
     auto = auto[~auto[key].isin(decided)]
     eng_df = pd.DataFrame({key: list(eng), "functional_location": list(eng.values()), "confidence": 1.0,
-                           "method": "engineer"})
-    return pd.concat([auto[[key, "functional_location", "confidence", "method"]], eng_df], ignore_index=True)
+                           "method": "engineer", "evidence": "engineer decision in the review screen"})
+    return pd.concat([auto[[key, "functional_location", "confidence", "method", "evidence"]], eng_df],
+                     ignore_index=True)
 
 
 # --------------------------------------------------------------------- load

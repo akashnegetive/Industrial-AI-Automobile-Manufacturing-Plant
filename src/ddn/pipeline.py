@@ -25,6 +25,7 @@ STEPS = [
     ("ddn.tags", "Part C1 staging tables"),
     ("ddn.evaluate", "Part C rules baseline"),
     ("ddn.match_ml", "Part C ML matcher"),
+    ("ddn.export", "Part C predictions for the hidden test set (outputs/)"),
     ("ddn.documents", "Part C5 drawings (incl. OCR) and manuals"),
     ("ddn.workorders", "Part C4 work-order failure modes (spaCy)"),
     ("ddn.context", "MES stations, feeds edges, alarm sources"),
