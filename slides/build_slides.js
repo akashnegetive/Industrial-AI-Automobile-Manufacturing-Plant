@@ -176,7 +176,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   }
   s.addText([
     { text: "One command: ", options: { bold: true } },
-    { text: "run_all.bat (Windows) or make all  ·  17 steps  ·  99 tests  ·  synthetic DDN-01 pack only" },
+    { text: "run_all.bat (Windows) or make all  ·  18 steps  ·  102 tests  ·  synthetic DDN-01 pack only" },
   ], { x: 0.5, y: 4.05, w: 9, h: 0.5, fontSize: 14, color: C.text2, margin: 0, isTextBox: true });
   s.addText("Thresholds, review band and backlog follow the assignment's Figure 1; thresholds come from the precision–recall curve, not from the example values.",
     { x: 0.5, y: 4.5, w: 9, h: 0.5, fontSize: 12, italic: true, color: C.accent5, margin: 0, isTextBox: true });
@@ -324,7 +324,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   s.addText(bullets([
     [T("Why: "), { text: "a wrong link sends a recall investigation to the wrong machine" }],
     [T("Auto band: "), { text: "95.7% of WOs linked with 0 errors" }],
-    [T("Review queue: "), { text: "9 tags, 122 WOs, 44 document mentions" }],
+    [T("Three bands: "), { text: "auto · review (9 tags, 70 WOs) · backlog (52 WOs, from the out-of-fold data)" }],
     [T("Engineer decisions "), { text: "become method=engineer edges and new training labels" }],
   ], 14), { x: 5.5, y: 1.3, w: 4.0, h: 3.6, valign: "top", margin: 0, isTextBox: true });
   s.addNotes("Interview Q3: how did you set the threshold? Lowest score where out-of-fold precision ≥ 0.995 and no wrong-machine error. A wrong auto-accepted link costs far more than a link waiting for review. Work orders that explain an anomaly are shown first in the review screen.");
@@ -338,8 +338,8 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   const wf = [
     ["Normalise", "Hinglish → \"current low\"; ST4 → ST04; R7 / robot 7 → RB07"],
     ["Extract", "tokens L2 · ST04 · RB07 + components WG, TD; ISO 14224 LOO (low output)"],
-    ["Match", "top candidate RB07-WG (weld gun) at a low score → review band"],
-    ["Review", "ranked first: explains anomaly AN-003; engineer approves or corrects"],
+    ["Match", "top candidate RB07-WG (weld gun) at 0.034: backlog band"],
+    ["Review", "pulled into review, ranked first: it explains anomaly AN-003"],
     ["Edge", "method=engineer, confidence 1.0, reused as a training label"],
   ];
   wf.forEach((w, i) => {
@@ -466,6 +466,28 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   ], { x: 5.9, y: 1.25, w: 3.6, h: 3.7, color: C.text1, valign: "top", margin: 0, isTextBox: true });
   s.addNotes("Tell the story: 2/10 with gpt-4o-mini and a thin prompt; real relationship patterns, worked examples and direction checks took it to 7; the supplier-lot cause was missing from the graph itself (8 → 10). Then held-out 2/5 exposed overfitting, so fixes were made only by failure type, and a fresh held-out set passed 5/5 automatically, but reading the answers showed one led with a routine PM order instead of the repair: honestly 4/5. Run 5 also showed randomness, fixed with temperature 0.");
 
+  s = content("E3 bonus: link prediction", "Part E – AI");
+  table(s, [["", "n", "hit@1", "hit@3", "hit@5"],
+    ["All labelled records", "1,427", "0.82", "–", "0.97"],
+    ["Hard: matcher unsure or wrong", "20", "0.30", { text: "0.75", options: { bold: true, color: C.accent1 } }, "0.85"]],
+    { x: 0.5, y: 1.2, w: 5.6, colW: [2.6, 0.7, 0.75, 0.8, 0.75], fontSize: 13, rowH: 0.45 });
+  s.addText(bullets([
+    [T("Asset embedding = "), { text: "own tokens + mean of its approved records (GraphSAGE-style aggregation)" }],
+    [T("Used for the backlog only: "), { text: "top 3 to the review screen, never auto-accepted" }],
+    [T("First try (SVD embedding): "), { text: "hit@1 0.03, replaced and reported" }],
+  ], 14), { x: 0.5, y: 2.75, w: 5.6, h: 2.2, valign: "top", margin: 0, isTextBox: true });
+  card(s, 6.4, 1.2, 3.1, 3.65, "example card");
+  s.addText([
+    { text: "WO 4100629", options: { bold: true, color: C.accent1, breakLine: true } },
+    { text: "\"Station 04 L2 fixture locating pin worn\"", options: { italic: true, breakLine: true } },
+    { text: " ", options: { fontSize: 6, breakLine: true } },
+    { text: "Matcher: ", options: { bold: true } }, { text: "conveyor L1-CV01 (0.002)", options: { breakLine: true } },
+    { text: "Link prediction: ", options: { bold: true } }, { text: "DDN1-BIW-L2-ST04-FX", options: { breakLine: true } },
+    { text: " ", options: { fontSize: 6, breakLine: true } },
+    { text: "For 11 of 16 records the matcher got wrong, the right asset is in link prediction's top 3.", options: { fontSize: 13 } },
+  ], { x: 6.6, y: 1.35, w: 2.75, h: 3.4, fontSize: 14, color: C.text1, valign: "top", margin: 0, isTextBox: true });
+  s.addNotes("Bonus E3. Be honest about the history: the first spectral embedding scored hit@1 0.03 because sibling robots share tokens; aggregating the approved links fixed it. It is weaker than the matcher overall, so it only helps where the matcher is unsure: the backlog. Two settings were picked on the same folds, so the numbers are slightly optimistic.");
+
   // ============================================================ wrap-up
   pres.addSection({ title: "Wrap-up" });
   s = content("Limits I state up front", "Wrap-up");
@@ -474,7 +496,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     [md.MdTune, "Thresholds from little data", "one more error would move the WO threshold"],
     [md.MdPendingActions, "Root causes in review", "4 of 8 root-cause WOs wait for an engineer"],
     [md.MdSchedule, "Inferred reads after buffers", "up to 69 min off; flagged with uncertainty"],
-    [md.MdHelpOutline, "Causes are hypotheses", "lot cause needs a defect-to-part map; E3 not attempted"],
+    [md.MdHelpOutline, "Causes are hypotheses", "lot cause needs a defect-to-part map"],
     [md.MdCloudOff, "GraphRAG: lenient check, OpenAI", "automatic 5/5 was 4/5 by hand; data sent out"],
   ];
   for (let i = 0; i < lim.length; i++) {
@@ -525,7 +547,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   s = content("Code walkthrough: where to look", "Live demo and code");
   table(s, [
     ["File", "Open it to show"],
-    ["src/ddn/pipeline.py", "the 17 steps in order: one list used by make all and run_all"],
+    ["src/ddn/pipeline.py", "the 18 steps in order: one list used by make all and run_all"],
     ["src/ddn/match_ml.py", "CandidateGenerator (blocking), pair_features(), cross_validate(), thresholds()"],
     ["src/ddn/review.py, apps/review_app.py", "review queue, decisions.csv, decisions reused as labels"],
     ["ontology/ontology_v1.yaml", "node and edge types, provenance, views, changelog"],
@@ -533,7 +555,8 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     ["src/ddn/queries.py", "the seven Cypher queries D1–D7"],
     ["src/ddn/anomaly.py", "robust_z(), alarm_windows(), judge()"],
     ["src/ddn/graphrag.py", "validate(), run_read(), ground(), expand()"],
-  ], { x: 0.5, y: 1.2, w: 9, colW: [3.4, 5.6], fontSize: 13, rowH: 0.42 });
+    ["src/ddn/linkpred.py", "E3: LinkPredictor.fit() aggregates approved links; suggest()"],
+  ], { x: 0.5, y: 1.15, w: 9, colW: [3.4, 5.6], fontSize: 13, rowH: 0.37 });
   s.addNotes("Let them choose. For 'walk through one work order' (question 1) open textnorm.extract, then match_ml features, then the review screen. For 'why does the graph think this' open graph.prov and show an edge's evidence in the Neo4j browser.");
 
   s = pres.addSlide({ masterName: "TITLE_DARK", sectionTitle: "Wrap-up" });

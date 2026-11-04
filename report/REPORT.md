@@ -9,7 +9,7 @@ date: "November 2026"
 
 **Result in one paragraph.** A Python pipeline links the siloed records of plant DDN-01 to one asset
 hierarchy and loads them into a Neo4j knowledge graph with provenance on every edge. It runs end to end with
-one command (`run_all.bat` on Windows, `make all` elsewhere; 17 steps, 99 tests). Tags are matched with
+one command (`run_all.bat` on Windows, `make all` elsewhere; 18 steps, 102 tests). Tags are matched with
 **F1 1.000** and work orders with **F1 0.982** (out-of-fold on the TRAIN labels; the hidden test set is the
 real measure), with **0 wrong auto-accepted links**. The graph holds 165,706 nodes and 1.14 M relationships,
 answers the 7 required queries, contains 8 anomaly events (all 8 seeded signal problems found, 1 judged a
@@ -207,9 +207,16 @@ Scores are **out-of-fold** with GroupKFold by record, so no record is scored by 
 **Thresholds by cost, not by F1.** In a recall investigation, a wrong auto-accepted link sends engineers to
 the wrong machine, which is worse than a link waiting for review. The auto-accept threshold is therefore
 the lowest score on the out-of-fold precision curve with **precision ≥ 0.995 and no wrong-machine error**
-(0.932 for work orders, 0.50 for tags). Below it, links go to the **Streamlit review screen**. Each decision is
-stored in `data/review/decisions.csv`, becomes an `method=engineer` edge, and is reused as a training label on
-the next run. Anomaly-explaining work orders are shown first.
+(0.932 for work orders, 0.50 for tags). Below it there are **three bands, as in the assignment's Figure 1**:
+**review** (the Streamlit review screen) and, below a second threshold, a **backlog** (data-quality queue). The
+backlog cut-off is also read from the out-of-fold data: the highest score under which the top candidate was
+right at most 25% of the time. For work orders that is **0.093** (of the 6 labelled orders below it, 1 was
+right), so 52 orders go to the backlog. For tags there is **no backlog**: even the lowest-scoring labelled tags
+were right (10 of 10), so the data does not support one. Two exceptions keep the backlog from hiding anything
+important. A backlog work order that **explains a detected anomaly** is pulled into review and shown first
+(WO 4102961, the robot R7 repair, scores 0.034). And every other backlog record is offered to review with
+**link prediction's top 3** (Part E3, below). Each decision is stored in `data/review/decisions.csv`, becomes a
+`method=engineer` edge, and is reused as a training label on the next run.
 
 **Text and documents.** Work orders: a Hinglish normaliser ("robo", "nahi chal raha"), then a spaCy
 EntityRuler for equipment mentions and a phrase dictionary for **ISO 14224** failure modes (`STD`, `ERO`,
@@ -280,7 +287,8 @@ changed, current back to 9.4 kA."* There is no SAP equipment number. The normali
 components WG (gun) and TD (tip dresser). The failure-mode step gives ISO 14224 `LOO` (low output; also SER, STD).
 The matcher's top candidate is the **weld gun** `DDN1-BIW-L2-ST04-RB07-WG`, at a low score. This is where it goes
 wrong: the text names the robot, its gun *and* the tip dresser, and SAP could hold the order on any of the three.
-So it is **not** auto-accepted. It waits in the review screen, ranked first because it explains anomaly AN-003.
+Its score, 0.034, is even below the backlog cut-off. But it **explains anomaly AN-003**, so it is pulled into the
+review screen and shown first.
 Once an engineer approves or corrects it, it becomes a `method=engineer` edge and a new training label.
 
 **One VIN end to end** (`python -m ddn.demo vin`): MDDA5XK00D003924 (Hatch 1.2 MT) entered the body shop on
@@ -329,7 +337,9 @@ chal raha": robot or gun?) and from a few contradictory labels. Most sit below t
 caught by review.
 
 **Coverage and review load.** Contextualized automatically: **99.4% of tags** (1,532 / 1,541) and **95.9% of
-work orders** (2,846 / 2,968). Review queue: 9 tags, 122 work orders, 44 document mentions. Document mentions:
+work orders** (2,846 / 2,968). Review queue: 9 tags, 70 review-band work orders + 1 pulled up from the
+backlog because it explains an anomaly, 51 backlog work orders with link-prediction suggestions, and 44
+document mentions. Backlog: 52 work orders, 0 tags. Document mentions:
 255 found, all resolved, 211 auto-accepted (≥ 0.90). Work orders: 100% of corrective work orders received an
 ISO 14224 failure mode. Hidden-test predictions are written to `outputs/predictions_*.csv` (1,002 tags and
 2,080 work orders not in TRAIN), with confidence and band.
@@ -381,15 +391,33 @@ order** (4102593) and gave the correct repair, 4102962, second. So it is **4/5 o
 in any run contained an invented fact: every cited value came from the graph. The 10 questions and the
 held-out set, with expected and actual answers, are in Appendix B.
 
+**E3 (bonus): suggesting missing links** (`reports/15`). The matcher scores pairs with designed features;
+link prediction instead learns from the graph. Each asset gets a node embedding: its own tokens plus the mean of
+the vectors of the records already linked to it, which is one round of GraphSAGE-style mean aggregation with no
+learned weights. Records are then ranked against all 455 assets by cosine similarity. Out-of-fold (a fold's own
+links hidden):
+
+| | n | Link prediction hit@1 | hit@3 | hit@5 | Matcher top-1 (out-of-fold) |
+|---|---:|---:|---:|---:|---:|
+| All labelled records | 1,427 | 0.820 | – | 0.965 | 0.989 |
+| Hard: matcher unsure or wrong | 20 | 0.30 | **0.75** | 0.85 | – |
+
+It is weaker than the matcher overall, as expected without designed features. On the hard records its top-1
+is unreliable, but its top 3 holds the answer 75% of the time: for 11 of the 16 records the matcher got wrong.
+So it is used only as a short list for the engineer, never auto-accepted. Examples: WO 4100629 *"Station 04 L2
+fixture locating pin worn"*, where the matcher guessed a conveyor and link prediction gives `DDN1-BIW-L2-ST04-FX`;
+and WO 4100244 *"PL1 DST jam"*, where the matcher guessed the press and link prediction gives the destacker. A
+first version with a spectral (SVD) embedding reached only hit@1 0.03, because siblings like robot 07 on three
+lines share their tokens; aggregating the approved links is what separates them.
+
 # 5. Limitations
 
 * **Synthetic data, TRAIN-only scores.** All matching scores are out-of-fold on the TRAIN labels. The rules were
   designed after reading those labels, so the hidden test set is the real measure. Tags at F1 1.000 mostly
   shows that the synthetic naming is regular.
 * **Thresholds from little data.** The auto threshold for work orders rests on ~850 auto-linked labelled
-  records; one more error would move it. All non-auto links go to review (there is no separate backlog band),
-  because every record had a plausible candidate. A real plant needs a lower cut-off to keep review work
-  manageable.
+  records; one more error would move it. The backlog cut-off rests on only 6 labelled work orders, and
+  tags have no backlog at all because the labelled data gives no reason for one.
 * **Review band holds root causes.** 4 of the 8 root-cause work orders (including NR14's calibration) scored
   in the review band, so the graph is incomplete until an engineer approves them.
 * **Sentence embeddings off.** `sentence-transformers` could not download its model in the build
@@ -407,7 +435,9 @@ held-out set, with expected and actual answers, are in Appendix B.
 * **GraphRAG scoring.** The automatic check passes an answer if the expected IDs appear anywhere in it, so it
   misses answers that lead with the wrong record. Answers were reviewed by hand; a stricter grader (an LLM
   judge, or checking the first claim) would be the next step.
-* **Not attempted:** E3 (link prediction, bonus) and the optional seeded data generator.
+* **E3 link prediction** is a parameter-free aggregation, not a trained GNN. Its two settings were picked
+  from 6 combinations on the same labelled folds, so its scores are slightly optimistic. **Not attempted:** the
+  optional seeded data generator.
 * **Part A** compares documentation, not hands-on use: no vendor platform was used to build this pipeline.
 * **Neo4j Community**: a single instance, no role-based access, no clustering.
 

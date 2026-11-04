@@ -39,3 +39,43 @@ def test_demo_stories_run(capsys):
     demo.vin_story(None)
     out = capsys.readouterr().out
     assert "DDN1-BIW-L2-ST04-RB07" in out and "causedBy AN-003" in out
+
+
+# ------------------------------------------------------------------ three-band gate (backlog)
+def test_backlog_threshold_only_where_low_scores_were_mostly_wrong():
+    from ddn import match_ml as M
+    cat = pd.DataFrame({"parent": {}})
+    recs = [f"r{i}" for i in range(12)]
+    conf = [0.99] * 6 + [0.5, 0.4, 0.03, 0.02, 0.01, 0.005]
+    right = [True] * 8 + [False] * 4                       # the four lowest scores are wrong
+    oof = pd.DataFrame({"record": recs, "confidence": conf,
+                        "functional_location": ["A" if r else "B" for r in right]})
+    truth = {r: "A" for r in recs}
+    t_auto, t_review, _ = M.thresholds(oof, truth, cat.assign(parent=pd.Series(dtype=str)))
+    assert t_review > 0.03 and t_review <= t_auto           # backlog = the four wrong ones
+    oof2 = oof.assign(functional_location="A")              # low scores but all right -> no backlog
+    assert M.thresholds(oof2, truth, cat.assign(parent=pd.Series(dtype=str)))[1] == 0.0
+
+
+@NEED_STAGING
+def test_review_queue_pulls_anomaly_work_orders_from_backlog_and_adds_link_prediction():
+    from ddn.review import build_queue
+    if not (STAGING / "link_suggestions.parquet").exists():
+        pytest.skip("run python -m ddn.linkpred first")
+    q = build_queue()
+    assert q.iloc[0].explains_anomaly                        # anomaly-explaining items first
+    assert q.item_id.str.startswith("e3:").any()             # E3 suggestions routed to review
+    links = q[q.kind.isin(["tag", "workorder"])]
+    assert not links.record.duplicated().any()               # one item per tag / work order
+
+
+# ------------------------------------------------------------------ E3 link prediction
+@NEED_STAGING
+def test_link_prediction_learns_from_approved_links():
+    from ddn import linkpred as L
+    assets = pd.read_parquet(STAGING / "assets.parquet")
+    recs = L.records()
+    lp = L.LinkPredictor(assets, recs)
+    wo = "4100629"                                           # "Station 04 L2 fixture locating pin worn"
+    top = [fl for fl, _ in lp.fit(L.approved_links(recs)).suggest(wo, k=3)]
+    assert "DDN1-BIW-L2-ST04-FX" in top

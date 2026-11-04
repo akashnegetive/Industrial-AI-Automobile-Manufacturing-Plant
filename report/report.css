@@ -1,5 +1,5 @@
 @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
-body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 10pt; line-height: 1.42; color: #1b1f24; max-width: none; margin: 0; padding: 0; }
+body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 10pt; line-height: 1.36; color: #1b1f24; max-width: none; margin: 0; padding: 0; }
 header#title-block-header { border-bottom: 3px solid #1f4e79; margin-bottom: 10px; padding-bottom: 6px; }
 h1.title { font-size: 20pt; color: #1f4e79; margin: 0 0 2px; }
 p.subtitle { font-size: 11pt; color: #4a5a6a; margin: 0; }

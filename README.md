@@ -12,7 +12,8 @@ provenance on every edge**, then uses the graph for **anomaly detection** and **
 | | Result |
 |---|---|
 | Entity matching (out-of-fold on TRAIN labels) | Tags **F1 1.000**, work orders **F1 0.982**; **0 wrong auto-accepted links** |
-| Automatically contextualized | 99.4 % of tags, 95.9 % of work orders; the rest wait in the engineer review screen |
+| Automatically contextualized | 99.4 % of tags, 95.9 % of work orders. Three-band gate as in the assignment: auto-accept / review / backlog (52 work orders, threshold from the out-of-fold data) |
+| E3 bonus: link prediction | Graph-embedding second opinion for the backlog: hit@1 0.82 overall; on records the matcher got wrong or was unsure about, the right asset is in its top 3 for 75 % |
 | Knowledge graph | 165,706 nodes, 1,137,011 relationships, 0 edges without provenance, 0 ontology violations |
 | Anomaly detection | 8 / 8 seeded signal problems found, each linked to equipment, VINs, defects and a work order; 1 judged a false alarm, with reasons |
 | GraphRAG | 10 / 10 on the evaluation set, **4 / 5 on unseen held-out questions** (manually reviewed; the automatic check said 5 / 5); no answer in any run contained an invented fact |
@@ -32,7 +33,7 @@ and band.
 | Windows | `run_all.bat` (double-click), or `.\run_all.ps1` in PowerShell |
 
 Needs **Python 3.11+** and **Docker** (Neo4j 5 Community runs in it). The first run creates `.venv`, installs
-the requirements and takes about 15 minutes: 17 steps, then 99 tests. Expected output per step is in
+the requirements and takes about 15 minutes: 18 steps, then 102 tests. Expected output per step is in
 [`docs/LAPTOP_SETUP.md`](docs/LAPTOP_SETUP.md).
 
 Optional:
@@ -52,8 +53,8 @@ sources ──► staging ──► blocking ──► rules + LightGBM ──�
 
 - **Canonical key:** the SAP functional location (`DDN1-BIW-L2-ST04-RB07`); every other identifier is linked to it.
 - **Thresholds by cost:** auto-accept only where the out-of-fold precision is ≥ 0.995 with no wrong-machine
-  error. Everything else goes to the review screen, and each engineer decision becomes an edge and a training
-  label.
+  error; a backlog below the score where top candidates were mostly wrong; the review screen in between. Each
+  engineer decision becomes an edge and a training label. Backlog records get link prediction's top 3 (E3).
 - **Ontology first:** [`ontology/ontology_v1.yaml`](ontology/ontology_v1.yaml) (v1.3, 18 node and 19 edge types)
   drives the loader, the validation and the GraphRAG schema. Rendered as [`docs/ontology.md`](docs/ontology.md).
 - **GraphRAG safety in code:** LLM-written Cypher is validated against the ontology and run read-only;
@@ -80,7 +81,7 @@ Run these with `PYTHONPATH=src` and the `.venv` Python. The Neo4j browser is at 
 | B – Profiles, data quality (38 issues), identity schemes, 9 production problems | [`notebooks/01_data_profiling.ipynb`](notebooks/01_data_profiling.ipynb), [`reports/01`–`04`](reports/) |
 | C – Matching (rules vs ML), documents/OCR, work orders (ISO 14224), VIN traceability, review | [`reports/05`–`10`](reports/), [`apps/review_app.py`](apps/review_app.py), [`outputs/`](outputs/) |
 | D – Ontology, graph load, the 7 queries | [`ontology/`](ontology/), [`reports/11`–`12`](reports/) |
-| E – Anomaly detection, GraphRAG | [`reports/13`–`14`](reports/), [`apps/ask_app.py`](apps/ask_app.py) |
+| E – Anomaly detection, GraphRAG, E3 link prediction (bonus) | [`reports/13`–`15`](reports/), [`apps/ask_app.py`](apps/ask_app.py) |
 | Report, slides, demo script | [`report/`](report/), [`slides/`](slides/), [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) |
 | AI-assistant disclosure | [`docs/AI_USAGE.md`](docs/AI_USAGE.md) |
 
@@ -92,7 +93,7 @@ apps/           Streamlit screens: review_app.py, ask_app.py
 ontology/       ontology_v1.yaml (versioned, with changelog)
 reports/        generated reports 01–14 (Markdown, regenerated on every run)
 outputs/        predictions for the hidden test set
-tests/          pytest suite (99 tests; graph tests skip if Neo4j is not running)
+tests/          pytest suite (102 tests; graph tests skip if Neo4j is not running)
 notebooks/      data profiling notebook
 report/ slides/ final report (PDF + Markdown source) and interview slides
 docs/           research, ontology docs, laptop setup, design notes per stage (dayNN_explained.md)

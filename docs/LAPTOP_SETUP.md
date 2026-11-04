@@ -47,6 +47,7 @@ git pull                                     # get the day's work
 | 8 | 15 | 63 | `anomalies: 8 events (true_positive_quality 5, ...)`, `graph: 165,706 nodes, 1,136,926 rels` — **without Docker/Neo4j: 13 steps, 59 passed, 4 skipped** |
 | 9 | 16 | 95 | `graph: 165,706 nodes, 1,137,011 rels`, `graphrag (openai): n/10, held-out new n/5, used n/5` (with your key) or `graphrag (offline): 10/10` (no key) — **without Docker/Neo4j: 13 steps, 82 passed, 13 skipped** |
 | 10 | 17 | 99 | `predictions_tag_to_asset.csv: 1,541 records, 1,002 not in TRAIN` (new step 9, ddn.export) |
+| 10 (final) | 18 | 102 | `Work orders: ... thresholds auto 0.93 review 0.09`, `link prediction: hit@1 0.820 ... 52 backlog records routed to review with top 3` |
 
 If your numbers differ from this table, or a step fails, paste the last ~30 lines of the output into the chat.
 

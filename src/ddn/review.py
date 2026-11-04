@@ -37,12 +37,33 @@ def build_queue() -> pd.DataFrame:
         rows.append({"item_id": f"tag:{r.tag_name}", "kind": "tag", "record": r.tag_name,
                      "context": f"{t.description or '(no description)'} | unit {t.unit or '-'} | {t.source_system}",
                      "proposed_fl": r.functional_location, "confidence": round(r.confidence, 3)})
-    for r in pd.read_parquet(STAGING / "links_wo_number.parquet").query("band == 'review'").itertuples():
+    an_file = STAGING / "anomalies.parquet"
+    explains = set(pd.read_parquet(an_file).confirming_wo.dropna()) if an_file.exists() else set()
+    wol = pd.read_parquet(STAGING / "links_wo_number.parquet")
+    # review band, plus backlog work orders that explain a detected anomaly (pulled up for a human look)
+    for r in wol[(wol.band == "review") | ((wol.band == "backlog") & wol.wo_number.isin(explains))].itertuples():
         w = wo_text.loc[r.wo_number]
         rows.append({"item_id": f"wo:{r.wo_number}", "kind": "workorder", "record": r.wo_number,
-                     "context": f"{w.short_text} | {w.long_text if pd.notna(w.long_text) else ''} | "
+                     "context": ("[from backlog] " if r.band == "backlog" else "") +
+                                f"{w.short_text} | {w.long_text if pd.notna(w.long_text) else ''} | "
                                 f"eq no {w.equipment_no if pd.notna(w.equipment_no) else '-'} | {w.created_at[:10]}",
                      "proposed_fl": r.functional_location, "confidence": round(r.confidence, 3)})
+    # Part E3: backlog records get link prediction's top 3 (graph-based second opinion) as a review item
+    sug_file = STAGING / "link_suggestions.parquet"
+    sug = pd.read_parquet(sug_file) if sug_file.exists() else pd.DataFrame(columns=["record", "to_review"])
+    already = {r["record"] for r in rows}
+    for r in sug[sug.to_review & ~sug.record.isin(already)].itertuples():
+        text = (f"{tags.loc[r.record].description or '(no description)'}" if r.kind == "tag"
+                else f"{wo_text.loc[r.record].short_text}")
+        rows.append({"item_id": f"e3:{r.kind}:{r.record}", "kind": r.kind, "record": r.record,
+                     "context": f"[suggested by link prediction] {text} | other suggestions: {r.e3_alternatives} | "
+                                f"matcher's guess: {r.matcher_fl} ({r.matcher_conf:.3f}, backlog)",
+                     "proposed_fl": r.e3_fl, "confidence": round(float(r.e3_score), 3)})
+    hint = dict(zip(sug.record, sug.get("e3_fl", pd.Series(dtype=str))))
+    for row in rows:
+        if row["kind"] in ("tag", "workorder") and not row["item_id"].startswith("e3:") and row["record"] in hint \
+                and hint[row["record"]] != row["proposed_fl"]:
+            row["context"] += f" | link prediction suggests {hint[row['record']]}"
     docs = pd.read_parquet(STAGING / "doc_mentions.parquet")
     for r in docs[(docs.confidence < DOC_AUTO) & docs.target.notna()].itertuples():
         rows.append({"item_id": f"doc:{r.doc_id}:{r.page}:{r.label}:{r.target}", "kind": "document",
@@ -51,10 +72,21 @@ def build_queue() -> pd.DataFrame:
                      "proposed_fl": r.target, "confidence": r.confidence})
     q = pd.DataFrame(rows)
     # Items that explain a detected anomaly (Part E1) come first: they matter most for root cause.
-    an_file = STAGING / "anomalies.parquet"
-    explains = set(pd.read_parquet(an_file).confirming_wo.dropna()) if an_file.exists() else set()
     q["explains_anomaly"] = (q.kind == "workorder") & q.record.isin(explains)
     return q.sort_values(["explains_anomaly", "kind", "confidence"], ascending=[False, True, True]).reset_index(drop=True)
+
+
+def backlog() -> pd.DataFrame:
+    """The data-quality queue: links scored below the review threshold, not shown for approval (a reviewer
+    would mostly reject them). Fixing the source record (missing equipment number, vague text) is the cure."""
+    out = []
+    for kind, f, key in [("tag", "links_tag_name.parquet", "tag_name"), ("workorder", "links_wo_number.parquet", "wo_number")]:
+        p = STAGING / f
+        if p.exists():
+            d = pd.read_parquet(p).query("band == 'backlog'")
+            out.append(pd.DataFrame({"kind": kind, "record": d[key], "best_guess": d.functional_location,
+                                     "confidence": d.confidence.round(3)}))
+    return pd.concat(out, ignore_index=True) if out else pd.DataFrame(columns=["kind", "record", "best_guess", "confidence"])
 
 
 def load_decisions() -> pd.DataFrame:

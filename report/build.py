@@ -12,8 +12,8 @@ import re
 HERE = Path(__file__).resolve().parent
 html = HERE / "REPORT.html"
 QUERIES = HERE.parent / "reports" / "12_graph_queries.md"
-MAX_ROWS = 3
-MAX_NOTES = 3
+MAX_ROWS = 2
+MAX_NOTES = 2
 
 
 def query_appendix() -> str:
@@ -50,7 +50,7 @@ def query_appendix() -> str:
 
 
 GRAPHRAG = HERE.parent / "reports" / "14_graphrag.md"
-ANSWER_CHARS = 110
+ANSWER_CHARS = 95
 
 
 def graphrag_appendix() -> str:

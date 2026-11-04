@@ -26,6 +26,7 @@ STEPS = [
     ("ddn.evaluate", "Part C rules baseline"),
     ("ddn.match_ml", "Part C ML matcher"),
     ("ddn.export", "Part C predictions for the hidden test set (outputs/)"),
+    ("ddn.linkpred", "Part E3 (bonus) link prediction: suggest missing links for the backlog"),
     ("ddn.documents", "Part C5 drawings (incl. OCR) and manuals"),
     ("ddn.workorders", "Part C4 work-order failure modes (spaCy)"),
     ("ddn.context", "MES stations, feeds edges, alarm sources"),

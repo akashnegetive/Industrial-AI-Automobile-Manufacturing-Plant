@@ -16,7 +16,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from ddn.config import STAGING  # noqa: E402
-from ddn.review import build_queue, load_decisions, pending, save_decision  # noqa: E402
+from ddn.review import backlog, build_queue, load_decisions, pending, save_decision  # noqa: E402
 
 st.set_page_config(page_title="DDN-01 link review", layout="wide")
 
@@ -29,7 +29,8 @@ def assets() -> pd.DataFrame:
 
 def _inputs_version() -> tuple:
     """Modification times of the files the queue is built from: a new run_all refreshes the screen."""
-    files = ["links_tag_name.parquet", "links_wo_number.parquet", "doc_mentions.parquet", "anomalies.parquet"]
+    files = ["links_tag_name.parquet", "links_wo_number.parquet", "doc_mentions.parquet", "anomalies.parquet",
+             "link_suggestions.parquet"]
     return tuple((STAGING / f).stat().st_mtime if (STAGING / f).exists() else 0 for f in files)
 
 
@@ -56,7 +57,7 @@ with st.sidebar:
     st.caption("Auto-accepted links are already in the graph; this queue is the middle confidence band. "
                "Decisions become `method=engineer` edges and training labels on the next run.")
 
-tab_review, tab_done = st.tabs(["Review", "Decisions"])
+tab_review, tab_done, tab_backlog = st.tabs(["Review", "Decisions", "Backlog (data quality)"])
 
 with tab_review:
     items = todo[todo.kind.isin(kinds)]
@@ -95,3 +96,10 @@ with tab_review:
 
 with tab_done:
     st.dataframe(done, width="stretch", hide_index=True)
+
+with tab_backlog:
+    bl = backlog()
+    st.caption(f"{len(bl)} links scored below the review threshold: out-of-fold, such low scores were mostly "
+               "wrong, so they are not offered for approval. Fix the source record (equipment number, clearer text) "
+               "instead. Work orders that explain an anomaly are pulled into the Review tab anyway.")
+    st.dataframe(bl, width="stretch", hide_index=True)

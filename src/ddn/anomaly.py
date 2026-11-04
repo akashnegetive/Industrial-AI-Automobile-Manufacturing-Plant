@@ -159,12 +159,13 @@ class Context:
         wo_eng = engineer_labels("workorder")
         self.wos = pd.read_parquet(STAGING / "wo_failure_modes.parquet").merge(
             load("maintenance_work_orders.csv")[["wo_number", "created_at", "short_text", "long_text"]], on="wo_number")
-        # same policy as the graph: approved links (auto or engineer); review-band links are shown as pending
+        # same policy as the graph: approved links (auto or engineer); review-band links are shown as pending.
+        # Backlog links are kept as candidates too: an anomaly is exactly the context that makes an unlikely
+        # link worth a look, and review.build_queue pulls such work orders into the review queue.
         self.wos["functional_location"] = self.wos.wo_number.map(wo_eng).fillna(self.wos.functional_location)
         self.wos["link_status"] = np.where(self.wos.wo_number.isin(wo_eng), "engineer",
                                            np.where(self.wos.band == "auto_accept", "approved",
                                                     np.where(self.wos.band == "review", "pending review", "backlog")))
-        self.wos = self.wos[self.wos.link_status != "backlog"]
         self.tools = pd.read_parquet(STAGING / "tools.parquet").set_index("tool_id")
 
     def ancestors(self, fl: str) -> list[str]:
@@ -313,7 +314,8 @@ def main() -> None:
         lift = "every case" if has_defect and np.isinf(r.defect_lift) else f"{r.defect_lift:g}x"
         top = f"{r.top_defect} ({lift}, {int(r.defect_cases)} cases)" if has_defect else "—"
         wo_txt = ("—" if not isinstance(r.confirming_wo, str) else
-                  r.confirming_wo + (" (link pending review)" if r.wo_link == "pending review" else ""))
+                  r.confirming_wo + {"pending review": " (link pending review)",
+                                     "backlog": " (link in backlog, sent to review)"}.get(r.wo_link, ""))
         out.append(f"| {r.anomaly_id} | {r.detector} | `{r.signal}` | `{r.functional_location}` | {win} | "
                    f"{'' if pd.isna(r.peak_z) else r.peak_z} | {r.vehicles_exposed:,} | {top} | "
                    f"{wo_txt} | **{r.judged}** |")

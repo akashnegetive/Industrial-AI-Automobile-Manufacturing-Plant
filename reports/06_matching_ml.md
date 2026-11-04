@@ -19,7 +19,7 @@ Sentence-embedding feature: **off** (sentence-transformers or its model not avai
 
 - Records: 1,541; candidate pairs: 38,337 (avg 24.9 per record instead of 375)
 - **Blocking recall: 1.000** (true asset is among the candidates)
-- Thresholds from the precision curve: auto-accept ≥ **0.500**, review ≥ **0.00**, backlog below
+- Thresholds from the precision curve: auto-accept ≥ **0.500**, review ≥ **0.000**, backlog below (no backlog: low-scoring labelled records were still mostly right)
 - All 1,541 records: auto-accept 1,532, review 9, backlog 0
 - ML fixed 14 records the rules got wrong or missed; ML broke 0 records the rules got right
 
@@ -46,8 +46,8 @@ Threshold trade-off (out-of-fold, labelled records):
 
 - Records: 2,968; candidate pairs: 71,635 (avg 24.1 per record instead of 375)
 - **Blocking recall: 0.999** (true asset is among the candidates)
-- Thresholds from the precision curve: auto-accept ≥ **0.932**, review ≥ **0.00**, backlog below
-- All 2,968 records: auto-accept 2,846, review 122, backlog 0
+- Thresholds from the precision curve: auto-accept ≥ **0.932**, review ≥ **0.093**, backlog below (labelled records below it: 6, top candidate right 17%)
+- All 2,968 records: auto-accept 2,846, review 70, backlog 52
 - ML fixed 51 records the rules got wrong or missed; ML broke 0 records the rules got right
 
 ![PR curve](figures/pr_wo_number.png)

@@ -17,8 +17,9 @@ Pipeline for each record (a tag or a work order):
   4. Evaluation - 5-fold cross-validation grouped by record (out-of-fold
        predictions), so every TRAIN record is scored by a model that never saw it.
   5. Thresholds - read off the out-of-fold precision curve:
-       auto-accept above the last wrong-machine error and where precision >= 0.995, review queue down to where precision
-       of the next band drops below 0.5, backlog below that.
+       auto-accept above the last wrong-machine error and where precision >= 0.995; backlog below the score
+       under which the top candidate was right at most 25% of the time (if the data shows such a score);
+       review queue in between.
 
 Run:  python -m ddn.match_ml     (writes data/staging/links_*.parquet, reports/06_matching_ml.md)
 """
@@ -51,7 +52,8 @@ TOP_K = 15
 AUTO_PRECISION = 0.995     # auto-accept band precision (near-misses counted as errors), and in addition
                            # ZERO wrong-machine errors: a wrong robot/line can send a recall investigation
                            # astray; a review costs an engineer a minute.
-REVIEW_PRECISION = 0.50    # below this, a reviewer would mostly reject -> backlog
+BACKLOG_MAX_PRECISION = 0.25   # backlog: records whose top candidate was right at most this often out-of-fold
+MIN_BACKLOG_EVIDENCE = 3       # ...measured on at least this many labelled records, else no backlog
 
 # Unit -> equipment types it can belong to (domain knowledge: kA fits a weld robot,
 # Nm fits a nutrunner). Units not listed (degC, %, count...) carry no information.
@@ -258,7 +260,10 @@ def thresholds(oof: pd.DataFrame, truth: dict[str, str], cat: pd.DataFrame) -> t
     """Auto-accept threshold: the lowest confidence above which
          (a) there is NO wrong-machine error (a different robot/line would mislead a recall), and
          (b) overall precision, counting near-misses as errors, is >= AUTO_PRECISION.
-    Review threshold: walk down in bands of 20 until a band is < REVIEW_PRECISION correct."""
+    Review threshold (the backlog cut-off): the highest score t such that, out-of-fold, the labelled records
+    scoring below t had their top candidate right at most BACKLOG_MAX_PRECISION of the time (and there are
+    at least MIN_BACKLOG_EVIDENCE of them). A reviewer would mostly reject those, so they go to a data-quality
+    backlog instead of the review queue. If low scores were still mostly right, there is no backlog."""
     d = oof.assign(correct=oof.functional_location == oof.record.map(truth)).sort_values("confidence", ascending=False)
     d["hard_error"] = [not c and not is_near_miss(p, truth[r], cat)
                        for c, p, r in zip(d.correct, d.functional_location, d.record)]
@@ -268,12 +273,11 @@ def thresholds(oof: pd.DataFrame, truth: dict[str, str], cat: pd.DataFrame) -> t
     ok = d[(d.cum_precision >= AUTO_PRECISION) & (d.confidence > first_hard)]
     t_auto = max(float(ok.confidence.min()) if len(ok) else 1.0, 0.5)
     below = d[d.confidence < t_auto]
-    t_review = t_auto
-    for start in range(0, len(below), 20):
-        band = below.iloc[start:start + 20]
-        if band.correct.mean() < REVIEW_PRECISION:
-            break
-        t_review = float(band.confidence.min())
+    t_review = 0.0
+    for t in np.sort(below.confidence.unique()):
+        under = below[below.confidence < t]
+        if len(under) >= MIN_BACKLOG_EVIDENCE and under.correct.mean() <= BACKLOG_MAX_PRECISION:
+            t_review = float(t)
     return t_auto, min(t_review, t_auto), d
 
 
@@ -349,6 +353,8 @@ def main() -> None:
                     engineer_labels("workorder")), wo_rules, "wo_number",
          wo_truth),
     ]
+    for res, _, key, _ in results:                  # out-of-fold predictions, for fair comparisons (E3)
+        res["oof"].to_parquet(STAGING / f"oof_{key}.parquet", index=False)
     fig_dir = REPORTS / "figures"
     fig_dir.mkdir(exist_ok=True)
 
@@ -390,7 +396,10 @@ def main() -> None:
                    f"(avg {res['avg_cands']:.1f} per record instead of {len(cat)})",
                    f"- **Blocking recall: {res['block_recall']:.3f}** (true asset is among the candidates)",
                    f"- Thresholds from the precision curve: auto-accept ≥ **{res['t_auto']:.3f}**, "
-                   f"review ≥ **{res['t_review']:.2f}**, backlog below",
+                   f"review ≥ **{res['t_review']:.3f}**, backlog below"
+                   + (f" (labelled records below it: {len(lb):,}, top candidate right {lb.correct.mean():.0%})"
+                      if len(lb := res["curve"][res["curve"].confidence < res["t_review"]]) else
+                      " (no backlog: low-scoring labelled records were still mostly right)"),
                    f"- All {len(final):,} records: auto-accept {bands.get('auto_accept', 0):,}, "
                    f"review {bands.get('review', 0):,}, backlog {bands.get('backlog', 0):,}",
                    f"- ML fixed {len(fixed)} records the rules got wrong or missed; "
