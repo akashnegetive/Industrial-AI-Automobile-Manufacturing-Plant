@@ -10,7 +10,7 @@ box, review screen) is a short bonus if time allows.
 |---|---|---|
 | 0:00–0:25 | 1. Intro: what the project is | yes |
 | 0:25–1:35 | 2. One robot tag: raw name → graph node | **yes (required)** |
-| 1:35–2:00 | 3. The same robot in the Neo4j graph | nice |
+| 1:35–2:05 | 3. The tag as a node in the Neo4j graph (+ 4b: the car as a graph) | nice (shows the graph visually) |
 | 2:00–3:20 | 4. One VIN traced end to end | **yes (required)** |
 | 3:20–4:20 | 5. Ask the plant: a cited answer and "I don't know" | nice |
 | 4:20–5:20 | 6. Review loop: approve a link, then see it in the graph | nice (strong proof of Part C) |
@@ -151,13 +151,28 @@ The output has 5 blocks. Scroll slowly and talk about each one.
 > "Block 5 is the context: the robot belongs to station 4, line 2, body shop, plant. There's an anomaly on this
 > signal, AN-003, and the work order that fixed it."
 
-### Scene 3 – The same robot in the graph (1:35–2:00)
-**Do:** switch to browser tab 2 (Neo4j). Press the **blue play button** (or Ctrl + Enter). A small network
-appears. **Click one line (edge)** between the robot and its time series; the properties appear on the right.
+### Scene 3 – The tag as a node in the graph (1:35–2:05)
+Scene 2 showed the steps as text (blocks 4 and 5 are already graph queries). Now show the **same tag as a node**
+in the graph browser.
+
+**Do:** switch to browser tab 2 (Neo4j). Paste this query in the top box and press the **blue play button**:
+```cypher
+MATCH p1 = (t:TimeSeries {tag: 'DDN1_BIW_L2_R07_WELDCUR.PV'})<-[:hasTimeSeries]-(a:Asset)
+MATCH p2 = (a)-[:partOf*1..5]->(:Site)
+OPTIONAL MATCH p3 = (t)-[:hasEvent]->(:AnomalyEvent)
+OPTIONAL MATCH p4 = (a)-[:hasEvent]->(:AnomalyEvent)
+RETURN p1, p2, p3, p4
+```
+You see a small chain: **tag (TimeSeries) ← robot RB07 → station ST04 → line L2 → body shop → plant**, plus
+the **anomaly AN-003** node attached to both the tag and the robot. Drag a node with the mouse if circles overlap.
+
+**Do:** click the line (edge) between the **tag** and the **robot**. Its properties appear at the bottom or right.
 
 **Say:**
-> "Here is the same robot in Neo4j: its time series, work orders, the anomaly. If I click an edge, you see the
-> provenance: method, confidence, status. So anyone can ask 'why does the graph think this?'"
+> "Here is the tag as a node in the graph. It hangs under robot RB07, which sits in station 4, line 2, the body
+> shop and the plant: the ISA-95 hierarchy. The anomaly is attached to both the signal and the robot. When I click
+> the link from the tag to the robot, you see its provenance: method, confidence, status, evidence. So anyone can
+> ask 'why does the graph think this?'"
 
 ### Scene 4 – One VIN traced end to end (2:00–3:20)
 **Do:** switch to PowerShell window A. Type `cls` and Enter, then:
@@ -179,6 +194,22 @@ appears. **Click one line (edge)** between the robot and its time series; the pr
 > "Block 5 is the important one. This car had a cold-weld defect at body inspection. The graph says it was
 > caused by anomaly AN-003 on robot RB07 (the same robot from my first example), and the work order that fixed it
 > was 4102961. Every line here is one graph query."
+
+**Scene 4b – the same car in the graph browser (20 seconds, optional but strong).**
+Switch to the Neo4j tab and run:
+```cypher
+MATCH p1 = (v:Vehicle {vin: 'MDDA5XK00D003924'})-[:hasDefect]->(:Defect)-[:causedBy]->(e:AnomalyEvent)<-[:hasEvent]-(:Asset)
+MATCH p2 = (v)-[:containsPart]->(:Part {part_no: 'DOOR_SEAL'})-[:fromLot]->(:SupplierLot)
+MATCH p3 = (v)-[:exposedTo]->(e)
+RETURN p1, p2, p3
+```
+You see: **car → defect → caused by → anomaly AN-003 ← robot RB07**, the car **exposed to** the same anomaly,
+and the car's **door seal → lot WS-260904-B**.
+
+**Say:**
+> "And this is the same car as a graph: its defect, the anomaly that caused it, the robot it happened on, and a
+> part with its supplier lot. A question like 'which cars did this robot weld while the current drifted' is now one
+> query instead of a week of spreadsheets."
 
 ### Scene 5 – Ask the plant (3:20–4:20)
 **Do:** switch to browser tab 3 (Ask the plant). Click the **Question** box and type:
