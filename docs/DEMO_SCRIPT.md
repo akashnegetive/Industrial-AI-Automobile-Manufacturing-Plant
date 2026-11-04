@@ -13,10 +13,14 @@ box, review screen) is a short bonus if time allows.
 | 1:35–2:00 | 3. The same robot in the Neo4j graph | nice |
 | 2:00–3:20 | 4. One VIN traced end to end | **yes (required)** |
 | 3:20–4:20 | 5. Ask the plant: a cited answer and "I don't know" | nice |
-| 4:20–4:45 | 6. Review screen: backlog and link prediction | nice (skip if you're short of time) |
-| 4:45–5:00 | 7. Closing | yes |
+| 4:20–5:20 | 6. Review loop: approve a link, then see it in the graph | nice (strong proof of Part C) |
+| 5:20–5:35 | 7. Closing | yes |
 
-Speak slowly; about 130 words a minute is fine. The script below is about 600 words. Use your own words if
+**Recording in parts is fine.** Record each scene as its own clip, then join them (Clipchamp: drag the clips onto
+the timeline in order, then Export → 1080p). You can leave out waiting time, for example while a command runs.
+With Scene 6 the total is about 5:30. If you need to cut, shorten Scene 3 or 5, never Scenes 2 or 4.
+
+Speak slowly; about 130 words a minute is fine. The script below is about 700 words. Use your own words if
 they come more naturally; the script is a guide, not something to read word for word.
 
 ---
@@ -197,14 +201,60 @@ question:
 > "And if the data doesn't have the answer, it says 'I don't know' instead of guessing. On unseen test
 > questions it scored 4 out of 5, and it never invented a fact."
 
-### Scene 6 – Review screen (4:20–4:45) – skip if you're over time
-**Do:** switch to browser tab 4 (Review screen). Show the first item with the yellow banner, then click the
-**"Backlog (data quality)"** tab.
+### Scene 6 – The review loop: approve a link, see it in the graph (about 1 minute)
+This scene shows the human-in-the-loop part of Part C working end to end: **before → approve → after**. If
+you record in parts, record it as its own clip.
+
+**6a. Before: the link isn't in the graph yet.**
+Switch to the Neo4j tab. Replace the query in the top box with this one and run it:
+```cypher
+MATCH (a:Asset)-[r:hasWorkOrder]->(w:WorkOrder {wo_number: '4102964'})
+RETURN a.fl AS asset, r.method AS method, r.confidence AS confidence, r.status AS status, r.evidence AS evidence
+```
+It shows **"(no changes, no records)"**.
 
 **Say:**
-> "Links the model isn't sure about go to an engineer here. This first one is ranked first because it explains an
-> anomaly. Very unlikely links go to a backlog, and for those, a graph-based link prediction suggests the three
-> most likely assets. Every decision becomes a new link and a training label."
+> "Work order 4102964, the NR14 calibration, scored in the review band, so it is not in the graph yet. Only
+> confident or engineer-approved links get in."
+
+**6b. Approve it.**
+Switch to the review screen tab (http://localhost:8502). Type **4102964** in the search box on the left. Read the
+text, check the proposed asset (`DDN1-ASM-FN1-ST03-NR14`, Nutrunner 14), and click **Approve**.
+
+**Say:**
+> "In the review screen the engineer sees the work-order text and the proposed asset. The text says NR14, and the
+> proposed asset is nutrunner 14, so I approve it. The decision is saved, with my name and the time."
+
+Optional, 3 seconds: click the **Decisions** tab to show the saved row.
+
+**6c. Write the decision into the graph.**
+Switch to PowerShell window A and run:
+```powershell
+.venv\Scripts\python -m ddn.graph --decisions
+```
+It prints:
+`approve: (DDN1-ASM-FN1-ST03-NR14)-[:hasWorkOrder {method: engineer}]->(4102964)`
+
+**Say:**
+> "This writes the decision into the graph straight away. A full run does the same, and also uses it as a new
+> training label for the model."
+
+**6d. After: run the same query again.**
+Back in the Neo4j tab, run the same query (press the play button again). Now there is **1 row**:
+asset `DDN1-ASM-FN1-ST03-NR14`, method **engineer**, confidence **1.0**, status **approved**, and evidence
+*"engineer decision in the review screen (…, date and time)"*.
+
+**Say:**
+> "Same query, and now the link is there, with method 'engineer' and who approved it and when. So the graph
+> always shows why it believes something: the model, a rule, or a person."
+
+**Before you record this scene:** WO 4102964 must **not** be approved already. If you approved it earlier (the
+review screen shows "Decided" > 0 and 6a already returns a row), use another clearly correct item that isn't
+decided yet. In the search box, try **4102961** (*"R7 gun tip dressing fail"*, proposed the weld gun of robot 07)
+and change `'4102964'` in the query. Approve only links you are sure are right: decisions are real data.
+
+**Optional extra (10 seconds):** click the **Backlog (data quality)** tab and say: *"Very unlikely links go to a
+backlog. For those, link prediction suggests the three most likely assets."*
 
 ### Scene 7 – Closing (4:45–5:00)
 **Do:** switch back to browser tab 1 (README).

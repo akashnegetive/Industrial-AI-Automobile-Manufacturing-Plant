@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 import time
 from datetime import datetime
 
@@ -440,7 +441,39 @@ def validate_graph() -> dict:
     return out
 
 
+DECISION_EDGES = {"tag": ("hasTimeSeries", ("TimeSeries", "tag")), "workorder": ("hasWorkOrder", ("WorkOrder", "wo_number"))}
+
+
+def apply_decisions() -> list[str]:
+    """Write the review screen's decisions into the running graph straight away (seconds, not a full reload).
+    Approve / correct: replace the record's link with a method=engineer edge. Reject: remove it.
+    The next full load builds exactly the same edges from data/review/decisions.csv."""
+    d = load_decisions()
+    d = d[d.kind.isin(DECISION_EDGES)]
+    done = []
+    with driver() as drv, drv.session() as s:
+        for kind, g in d.groupby("kind"):
+            rel, (label, key) = DECISION_EDGES[kind]
+            for r in g.itertuples():
+                s.run(f"MATCH (:Asset)-[e:{rel}]->(n:{label} {{{key}: $rec}}) DELETE e", rec=r.record).consume()
+                if r.decision in ("approve", "correct") and isinstance(r.functional_location, str):
+                    row = pd.DataFrame([{"fl": r.functional_location, "rec": r.record}])
+                    row = prov(row, "PIPELINE", "engineer", 1.0,
+                               evidence=f"engineer decision in the review screen ({r.reviewer}, {r.decided_at})")
+                    edges(s, rel, row, ("Asset", "fl", "fl"), (label, key, "rec"))
+                    done.append(f"{r.decision}: ({r.functional_location})-[:{rel} {{method: engineer}}]->({r.record})")
+                else:
+                    done.append(f"reject: removed {rel} link of {r.record}")
+    return done
+
+
 def main() -> None:
+    if "--decisions" in sys.argv:            # quick path after the review screen: python -m ddn.graph --decisions
+        done = apply_decisions()
+        print(f"applied {len(done)} review decision(s) to the graph:")
+        for line in done:
+            print("  " + line)
+        return
     counts = load_graph()
     v = validate_graph()
     total_n, total_r = sum(v["nodes"].values()), sum(v["rels"].values())

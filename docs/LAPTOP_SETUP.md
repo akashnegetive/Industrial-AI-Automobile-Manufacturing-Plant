@@ -62,6 +62,7 @@ If your numbers differ from this table, or a step fails, paste the last ~30 line
   .venv\Scripts\streamlit run apps\review_app.py
   ```
   It opens in your browser. Decisions are saved to `data\review\decisions.csv` and used on the next `run_all`.
+  To put them into the graph straight away (seconds): `.venv\Scripts\python -m ddn.graph --decisions`.
   Commit and push that file if you want to keep your decisions.
 - **Stop Neo4j** when you're done (it uses ~1.5 GB RAM): `docker compose down`. The data is kept for next time.
 
