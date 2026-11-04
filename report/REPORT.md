@@ -7,38 +7,38 @@ date: "November 2026"
 
 <div class="summary">
 
-**Result in one paragraph.** A Python pipeline links the siloed records of plant DDN-01 to one asset
+**Summary.** I built a Python pipeline that links the siloed records of plant DDN-01 to one asset
 hierarchy and loads them into a Neo4j knowledge graph with provenance on every edge. It runs end to end with
 one command (`run_all.bat` on Windows, `make all` elsewhere; 18 steps, 102 tests). Tags are matched with
-**F1 1.000** and work orders with **F1 0.982** (out-of-fold on the TRAIN labels; the hidden test set is the
-real measure), with **0 wrong auto-accepted links**. The graph holds 165,706 nodes and 1.14 M relationships,
+F1 1.000 and work orders with F1 0.982 (out-of-fold on the TRAIN labels; the hidden test set is the
+real measure), with 0 wrong auto-accepted links. The graph holds 165,706 nodes and 1.14 M relationships,
 answers the 7 required queries, contains 8 anomaly events (all 8 seeded signal problems found, 1 judged a
-false alarm), and supports a GraphRAG question box that scored **10/10 on its evaluation set and 4/5 on unseen
-questions** (manually reviewed) and never stated an invented fact in any run. All data is the synthetic DDN-01 pack.
+false alarm), and supports a GraphRAG question box that scored 10/10 on its evaluation set and 4/5 on unseen
+questions (manually reviewed) and never stated an invented fact in any run. All data is the synthetic DDN-01 pack.
 
 </div>
 
 # 1. Part A – How industrial platforms do contextualization
 
-Compared: **Cognite Data Fusion (CDF)**, **Siemens** (Insights Hub, Industrial Information Hub, Industrial
-Copilot) and **AWS IoT TwinMaker**, from vendor documentation. The full version with every link is
+I compared Cognite Data Fusion (CDF), Siemens (Insights Hub, Industrial Information Hub, Industrial
+Copilot) and AWS IoT TwinMaker, working from their documentation. The full version with every link is
 `docs/part_a_research.md`.
 
 <div class="note">Every link was opened and each claim checked against the live vendor page (November 2026). ⚠ marks a claim searched for but not found on an official page.</div>
 
-**How the plant is modelled.** CDF's *Data Modeling Service* separates **containers** (physical storage of
-properties), **views** (logical schemas over containers, which can rename, combine and inherit) and **data
+**How the plant is modelled.** CDF's *Data Modeling Service* separates containers (physical storage of
+properties), views (logical schemas over containers, which can rename, combine and inherit) and **data
 models** (groups of views), all scoped to a *space*
 ([Cognite: containers, views, data models](https://docs.cognite.com/cdf/dm/dm_concepts/dm_containers_views_datamodels)).
-Cognite ships a **Core Data Model** (`cdf_cdm`) with `CogniteAsset`, `CogniteEquipment`, `CogniteTimeSeries`,
+Cognite ships a Core Data Model (`cdf_cdm`) with `CogniteAsset`, `CogniteEquipment`, `CogniteTimeSeries`,
 `CogniteFile`, `CogniteActivity`; `CogniteAsset` carries parent, root and an automatic path
-([Core data model](https://docs.cognite.com/cdf/dm/dm_reference/dm_core_data_model)). Siemens **Insights Hub**
+([Core data model](https://docs.cognite.com/cdf/dm/dm_reference/dm_core_data_model)). Siemens Insights Hub
 builds *asset types* from *variables* and *aspects*, inherited from the parent type
 ([Asset Management](https://developer.siemens.com/insights-hub/docs/apis/advanced-assetmanagement/api-assetmanagement-overview.html));
-**IIH Semantics** exposes models and time series through a GraphQL API backed by a knowledge graph
+IIH Semantics exposes models and time series through a GraphQL API backed by a knowledge graph
 ([IIH](https://developer.siemens.com/industrial-information-hub/overview.html)). AAS support is a separate
-product, **SITRANS assetfox** ([assetfox](https://www.siemens.com/en-us/products/sitrans/assetfox/)) ⚠ (none found
-inside Insights Hub). In **TwinMaker**, twins are *entities* with *components*; relationship properties become
+product, SITRANS assetfox ([assetfox](https://www.siemens.com/en-us/products/sitrans/assetfox/)) ⚠ (none found
+inside Insights Hub). In TwinMaker, twins are *entities* with *components*; relationship properties become
 edges of its knowledge graph and parent links add `isChildOf`
 ([TwinMaker knowledge graph](https://docs.aws.amazon.com/iot-twinmaker/latest/guide/tm-knowledge-graph.html)).
 
@@ -61,20 +61,20 @@ workflow was found for Siemens or AWS ⚠: their links are configured, not predi
 
 **Standards.** ISA-95 hierarchies appear in all three (`CogniteAsset` path
 ([hierarchy guide](https://docs.cognite.com/cdf/dm/dm_guides/dm_cdm_build_asset_hierarchy)), Insights Hub
-asset tree, TwinMaker `isChildOf`). Siemens Rapidminer **Graph Studio** uses W3C ontologies
+asset tree, TwinMaker `isChildOf`). Siemens Rapidminer Graph Studio uses W3C ontologies
 ([Graph Studio](https://www.siemens.com/en-us/products/rapidminer/graph-studio/)); Cognite and AWS use their own
 property-graph models. Cognite binds units from a catalog at container level
 ([units](https://docs.cognite.com/dev/concepts/resource_types/units/units)). OPC UA ingestion is via
 extractors (Cognite) ⚠, native (Siemens), and SiteWise (AWS) ⚠.
 
-**How GenAI uses the graph.** **Cognite Atlas AI** agents call tools such as "query knowledge graph", document
+**How GenAI uses the graph.** Cognite Atlas AI agents call tools such as "query knowledge graph", document
 Q&A and time-series analysis; they require the Core Data Model and are separately licensed
 ([Atlas AI](https://docs.cognite.com/cdf/atlas_ai/concepts),
 [agent tools](https://docs.cognite.com/cdf/atlas_ai/references/atlas_ai_agent_tools)). **Siemens Industrial
 Copilot** (with Microsoft, Azure OpenAI) generates automation code and helps diagnose faults; Schaeffler uses it
 on the shop floor
 ([Siemens press](https://press.siemens.com/global/en/pressrelease/ai-industry-schaeffler-and-siemens-bring-industrial-copilot-shopfloor)).
-Its grounding is engineering data more than a plant graph ⚠. **TwinMaker** queries its graph with PartiQL
+Its grounding is engineering data more than a plant graph ⚠. TwinMaker queries its graph with PartiQL
 `MATCH`, including variable-length paths, which an agent can call as a tool
 ([queries](https://docs.aws.amazon.com/iot-twinmaker/latest/guide/tm-knowledge-graph-use.html)).
 
@@ -100,17 +100,17 @@ Platform, 43 sites, GenAI maintenance assistant
 state that TwinMaker is used. Cognite: no named automotive OEM case found ⚠; closest is Aarbakke, machining
 with welding robots ([case](https://www.cognite.com/en/customers/aarbakke)).
 
-**Ideas borrowed for Parts C and D.** From **Cognite**: rules and engineer-confirmed matches before the ML
+**Ideas I borrowed for Parts C and D.** From Cognite I took rules and engineer-confirmed matches before the ML
 model; a score threshold plus a remembered rejected list; `confidence` + `status` (suggested / approved /
-rejected) on every link; confirmed links reused as training labels (`refit`); and the **container / view**
-split, mirrored as one storage schema with role-specific views in the ontology file. From **Siemens**:
+rejected) on every link; confirmed links reused as training labels (`refit`); and the container / view
+split, mirrored as one storage schema with role-specific views in the ontology file. From Siemens:
 equipment *types* that define which signals a type should have, used as the "unit fits equipment type" feature.
-From **AWS**: variable-length path patterns for the `feeds` traversal (query D4). From all three: values stay
+From AWS: variable-length path patterns for the `feeds` traversal (query D4). From all three: values stay
 outside the graph, which holds only pointers.
 
 # 2. Part B – What the data pack contains
 
-14 files were profiled (`reports/01`, `notebooks/01_data_profiling.ipynb`): 455 assets, 1,541 tags in four
+I profiled all 14 files (`reports/01`, `notebooks/01_data_profiling.ipynb`): 455 assets, 1,541 tags in four
 naming conventions, 1.1 M one-minute values for 55 tags, 7,200 VINs with 310,462 RFID passages, 79,855 torque
 results, 64,800 part-lot records, 675 defects, 2,968 work orders and 7,917 alarms.
 
@@ -119,7 +119,7 @@ data dictionary**. Examples: 18 assets with a missing parent, a relocated robot 
 °F and °C in the same historian, a stuck sensor, 815 alarms writing `S3` for station `ST03`, SAP failure codes
 that contradict the work-order text, and a supplier lot id reused across two fitting sessions.
 
-**Identity schemes.** The canonical key is the SAP **functional location** (`DDN1-BIW-L2-ST04-RB07`). The
+**Identity schemes.** The canonical key is the SAP functional location (`DDN1-BIW-L2-ST04-RB07`). The
 same robot is `DDN1_BIW_L2_R07_WELDCUR.PV` in PI, `RB-207` on the drawing, `B2-04` in MES and "R7" or "robo
 7" in Hinglish work orders (`reports/03`). Defects are logged against VIN and inspection point, never against
 equipment, so only the graph can connect a defect to a machine.
@@ -191,49 +191,49 @@ rate vs. all other VINs):
 <p class="caption">Figure 1. Pipeline as built. Only auto-accepted or engineer-approved links enter the graph.</p>
 </div>
 
-**Canonical key: the SAP functional location.** It is the only identifier every engineer recognises, it encodes
+**Canonical key: the SAP functional location.** I picked it because it is the only identifier every engineer recognises, it encodes
 the ISA-95 path (site–shop–line–station–equipment–component), and it survives renaming in the historian.
 Every other identifier (tag, MES station, drawing label, alias in work-order text) becomes either a property
 (`aliases`, `mes_code`) or a linked node.
 
 **Matching (Part C).** Comparing every record with every asset (1,541 × 455) is wasteful and gets worse at
-scale, so **blocking** keeps the top-15 assets by character n-gram TF-IDF plus a token index on equipment
+scale, so I use blocking: it keeps the top-15 assets by character n-gram TF-IDF plus a token index on equipment
 codes. That is ~25 candidates per record instead of 375, with blocking recall 1.000 (tags) and 0.999 (work
-orders). A rules matcher (exact code, alias, relocation, SAP equipment number) is kept as a baseline *and* as a
+orders). I kept a rules matcher (exact code, alias, relocation, SAP equipment number) both as a baseline and as a
 feature. For each pair, 20 features (rule agreement, fuzzy name/FL scores, line and component conflicts, unit
-fits equipment type, SAP equipment number agrees with the text, valid at the record's time) feed **LightGBM**.
-Scores are **out-of-fold** with GroupKFold by record, so no record is scored by a model that saw its label.
+fits equipment type, SAP equipment number agrees with the text, valid at the record's time) feed LightGBM.
+Scores are out-of-fold with GroupKFold by record, so no record is scored by a model that saw its label.
 
 **Thresholds by cost, not by F1.** In a recall investigation, a wrong auto-accepted link sends engineers to
-the wrong machine, which is worse than a link waiting for review. The auto-accept threshold is therefore
-the lowest score on the out-of-fold precision curve with **precision ≥ 0.995 and no wrong-machine error**
-(0.932 for work orders, 0.50 for tags). Below it there are **three bands, as in the assignment's Figure 1**:
-**review** (the Streamlit review screen) and, below a second threshold, a **backlog** (data-quality queue). The
+the wrong machine, which is worse than a link waiting for review. So I set the auto-accept threshold at
+the lowest score on the out-of-fold precision curve with precision ≥ 0.995 and no wrong-machine error
+(0.932 for work orders, 0.50 for tags). Below it there are three bands, as in the assignment's Figure 1:
+review (the Streamlit review screen) and, below a second threshold, a backlog (data-quality queue). The
 backlog cut-off is also read from the out-of-fold data: the highest score under which the top candidate was
-right at most 25% of the time. For work orders that is **0.093** (of the 6 labelled orders below it, 1 was
-right), so 52 orders go to the backlog. For tags there is **no backlog**: even the lowest-scoring labelled tags
+right at most 25% of the time. For work orders that is 0.093 (of the 6 labelled orders below it, 1 was
+right), so 52 orders go to the backlog. For tags there is no backlog: even the lowest-scoring labelled tags
 were right (10 of 10), so the data does not support one. Two exceptions keep the backlog from hiding anything
-important. A backlog work order that **explains a detected anomaly** is pulled into review and shown first
+important. A backlog work order that explains a detected anomaly is pulled into review and shown first
 (WO 4102961, the robot R7 repair, scores 0.034). And every other backlog record is offered to review with
-**link prediction's top 3** (Part E3, below). Each decision is stored in `data/review/decisions.csv`, becomes a
+link prediction's top 3 (Part E3, below). Each decision is stored in `data/review/decisions.csv`, becomes a
 `method=engineer` edge, and is reused as a training label on the next run.
 
-**Text and documents.** Work orders: a Hinglish normaliser ("robo", "nahi chal raha"), then a spaCy
-EntityRuler for equipment mentions and a phrase dictionary for **ISO 14224** failure modes (`STD`, `ERO`,
-`FTS`, …). Drawings: PyMuPDF text layer, or **Tesseract OCR** for the scanned press-line drawing. OCR
+**Text and documents.** For work orders I first run a Hinglish normaliser ("robo", "nahi chal raha"), then a spaCy
+EntityRuler for equipment mentions and a phrase dictionary for ISO 14224 failure modes (`STD`, `ERO`,
+`FTS`, …). Drawings: PyMuPDF text layer, or Tesseract OCR for the scanned press-line drawing. OCR
 confidence is lower (0.85, or 0.70 after a correction, which goes to review). Labels like `RB-207` are resolved
 with the drawing's own line context.
 
 **VIN traceability.** MES stations are mapped to FLs (46/46). Missed RFID reads (6,332, 2%) are filled from
-line sequence and takt time (2.4 min) and flagged `inferred=true`. The inference was validated by hiding 5,793
-real reads: the median error is 0.28 min, and 95.7% are within one takt. The large errors sit right after
+line sequence and takt time (2.4 min) and flagged `inferred=true`. To check the inference I hid 5,793
+real reads and re-estimated them: the median error is 0.28 min, and 95.7% are within one takt. The large errors sit right after
 buffers, so each inferred passage stores `uncertainty_min` and gets a lower confidence.
 
 **Ontology first; property graph.** `ontology/ontology_v1.yaml` (v1.3.0, 18 node types, 19 edge types) is the
 single source of truth. It is validated with pydantic, rendered to `docs/ontology.md`, and used both by the loader
 (which rejects edges whose endpoints the ontology forbids) and by GraphRAG (the schema the LLM sees). Following
-Cognite, it separates **containers** (what is stored: labels + properties + indexes) from **views**
-(Maintenance, Quality, Traceability: what each role sees). I chose a **property graph (Neo4j Community + Cypher)**
+Cognite, it separates containers (what is stored: labels + properties + indexes) from views
+(Maintenance, Quality, Traceability: what each role sees). I chose a property graph (Neo4j Community + Cypher)
 over RDF. The questions are path questions with properties on the edges (time, confidence, provenance),
 and that is native in a property graph but needs reification in RDF. Cypher is easier to validate for
 LLM-generated queries, and it maps directly onto Cognite DMS (nodes, edges with properties, spaces). RDF/OWL
@@ -242,7 +242,7 @@ would win for cross-company semantic integration (AAS, supplier data).
 **Provenance and time.** Every edge has `source_system`, `method` (source_key / rule / fuzzy / ml / engineer /
 inferred / derived), `confidence`, `created_at` and `status`, plus `evidence` where useful ("rules (exact) and ML
 agree | ML p=1.0"). Robot RB12 moved from Line 1 to Line 2 in March 2026. `partOf` has `valid_from/valid_to`, so a
-VIN built before the move still traces to the old line. Time-series **values stay in Parquet**; the
+VIN built before the move still traces to the old line. Time-series values stay in Parquet; the
 `TimeSeries` node holds metadata, the latest value and a `store_uri`.
 
 **Keeping it fast.** 7,200 VINs × ~40 stations = 316,794 `passedThrough` and 511,182 `processedBy` edges. The
@@ -250,20 +250,20 @@ load uses batched `UNWIND` writes with uniqueness constraints and indexes on key
 indexed key (VIN, lot, FL), never from a label scan. At the assignment's scale (18,000 VINs) this stays in
 seconds. Section 6 covers what changes at 2 M VINs a year.
 
-**Anomalies (E1).** No hand-set limits. Each signal is compared with its own lagged 3-day median/MAD while the
+**Anomalies (E1).** I avoided hand-set limits. Each signal is compared with its own lagged 3-day median/MAD while the
 line is producing (a robust z-score), with a fast (12 h lag) and a slow (1 day lag) horizon, hysteresis (start
 |z| > 6, continue > 3) and ≥ 10 min duration. There is also a flat-line detector and a per-tool torque z-score.
-**Isolation Forest** was run as a comparison only: it flagged more windows with no clear meaning. Each event
+I ran Isolation Forest as a comparison only: it flagged more windows with no clear meaning. Each event
 is written as an `AnomalyEvent` on its equipment and tag, with `exposedTo` edges to the VINs processed in the
-window. It is then **judged** from context: the defect lift on exposed VINs, a confirming work order, and the
+window. It is then judged from context: the defect lift on exposed VINs, a confirming work order, and the
 bake window from the oven manual.
 
-**GraphRAG (E2).** The flow is: question → LLM writes Cypher from the ontology schema → **validator** →
-**read-only** transaction with a timeout → rows (+ fixed-query evidence expansion) → LLM answers as sentences
-with citations → **every citation must appear in the rows**, otherwise the sentence is dropped. The validator
+**GraphRAG (E2).** The flow is: question → LLM writes Cypher from the ontology schema → validator →
+read-only transaction with a timeout → rows (+ fixed-query evidence expansion) → LLM answers as sentences
+with citations → every citation must appear in the rows, otherwise the sentence is dropped. The validator
 rejects write keywords, unknown labels, relationships and properties, wrong arrow directions, and one variable
 reused for two node types, and it checks the query with `EXPLAIN`. Three paths lead to "I don't know": the model says the
-schema can't answer, the query returns 0 rows, or no sentence survives grounding. LLM: **OpenAI gpt-4o**
+schema can't answer, the query returns 0 rows, or no sentence survives grounding. For the LLM I used OpenAI gpt-4o
 (temperature 0, structured JSON output), because a key was available and it was the strongest model tested.
 Claude and Ollama are switchable, and an offline template mode keeps the pipeline and tests running without
 any key.
@@ -285,9 +285,9 @@ changed"* / *"Weld current low aa raha tha since yesterday. L2 ST4 robot 7. Tip 
 changed, current back to 9.4 kA."* There is no SAP equipment number. The normaliser turns the Hinglish into
 "current low", "ST4" into ST04 and "robot 7" / "R7" into RB07, giving the tokens L2, ST04, RB07 plus the
 components WG (gun) and TD (tip dresser). The failure-mode step gives ISO 14224 `LOO` (low output; also SER, STD).
-The matcher's top candidate is the **weld gun** `DDN1-BIW-L2-ST04-RB07-WG`, at a low score. This is where it goes
+The matcher's top candidate is the weld gun `DDN1-BIW-L2-ST04-RB07-WG`, at a low score. This is where it can go
 wrong: the text names the robot, its gun *and* the tip dresser, and SAP could hold the order on any of the three.
-Its score, 0.034, is even below the backlog cut-off. But it **explains anomaly AN-003**, so it is pulled into the
+Its score, 0.034, is even below the backlog cut-off. But it explains anomaly AN-003, so it is pulled into the
 review screen and shown first.
 Once an engineer approves or corrects it, it becomes a `method=engineer` edge and a new training label.
 
@@ -329,14 +329,14 @@ system, so this table shows where the rules alone lose recall, and therefore wha
 
 Rule precision is 1.000 everywhere: a rule that fires is right, and its only weakness is recall.
 
-**Where each method fails.** Rules miss **typos and unusual formats**: `DD1_` instead of `DDN1_`, glued
+**Where each method fails.** The rules miss typos and unusual formats: `DD1_` instead of `DDN1_`, glued
 sub-units like `PR2LUB`, and Hinglish text with no code. ML fixed 14 tag and 51 work-order records the rules got
-wrong or missed, and broke none. ML's remaining errors are **ambiguity**, not noise. "RB01 gun water leak"
+wrong or missed, and broke none. ML's remaining errors are ambiguity, not noise. "RB01 gun water leak"
 with no line could be robot 1 on L1, L2 or L3. Errors also come from robot vs. its weld gun ("R12 ka gun nahi
 chal raha": robot or gun?) and from a few contradictory labels. Most sit below the auto threshold and are
 caught by review.
 
-**Coverage and review load.** Contextualized automatically: **99.4% of tags** (1,532 / 1,541) and **95.9% of
+**Coverage and review load.** Contextualized automatically: 99.4% of tags (1,532 / 1,541) and **95.9% of
 work orders** (2,846 / 2,968). Review queue: 9 tags, 70 review-band work orders + 1 pulled up from the
 backlog because it explains an anomaly, 51 backlog work orders with link-prediction suggestions, and 44
 document mentions. Backlog: 52 work orders, 0 tags. Document mentions:
@@ -345,14 +345,14 @@ ISO 14224 failure mode. Hidden-test predictions are written to `outputs/predicti
 2,080 work orders not in TRAIN), with confidence and band.
 
 **Graph.** 165,706 nodes, 1,137,011 relationships, loaded in about 3 minutes. Relationships without full provenance:
-**0**; endpoints violating the ontology: **0**; provenance values outside the allowed lists: **0**. All 7
+0; endpoints violating the ontology: 0; provenance values outside the allowed lists: 0. All 7
 required queries return correct results (`reports/12`). Highlights: D1 lists the 4 Oven-2 temperature sensors
-with latest values converted from °F. D3 shows that NR14 had **no calibration work order in 12 months**, one
-of only 2 of 20 nutrunners. D5 shows the lot-id recall scope of **1,785 vehicles** shrinks to **1,492** when
+with latest values converted from °F. D3 shows that NR14 had no calibration work order in 12 months, one
+of only 2 of 20 nutrunners. D5 shows the lot-id recall scope of 1,785 vehicles shrinks to 1,492 when
 fitting time is used, which saves 293 good cars from a recall. D7 (plant head): 1,492 + 647 + 106 + 37 cars
 carried a known risk, and inspection caught only part of them.
 
-**Anomalies.** 8 events: **all 8 seeded signal problems found**, each written into the graph on its equipment,
+**Anomalies.** 8 events: all 8 seeded signal problems found, each written into the graph on its equipment,
 with `exposedTo` edges to the VINs processed in the window (`reports/13`):
 
 | Event | Equipment | Window | VINs exposed | Top defect on exposed VINs | WO | Verdict |
@@ -384,10 +384,9 @@ lot) has no signal; it is found through genealogy and loaded as a `causedBy → 
 | 5 | first held-out set; temperature 0 | 8/10 | 2/5 |
 | 6 | general fixes by failure type; **fresh** held-out set | **10/10** | **4/5** manual (5/5 automatic) |
 
-The tuned score is optimistic because the prompt was adjusted on those questions; the **unseen round-2 set** is
-the fair number. The automatic check only tests that the expected IDs appear in the answer. Reading the answers
-showed that one held-out answer ("which work order fixed the sealer nozzle problem?") **led with a routine PM
-order** (4102593) and gave the correct repair, 4102962, second. So it is **4/5 on manual review**. No answer
+The tuned score is optimistic because I adjusted the prompt on those questions; the unseen round-2 set is
+the fair number. The automatic check only tests that the expected IDs appear in the answer. When I read the answers, I found that one held-out answer ("which work order fixed the sealer nozzle problem?") **led with a routine PM
+order (4102593) and gave the correct repair, 4102962, second. So it is 4/5 on manual review**. No answer
 in any run contained an invented fact: every cited value came from the graph. The 10 questions and the
 held-out set, with expected and actual answers, are in Appendix B.
 
@@ -412,49 +411,49 @@ lines share their tokens; aggregating the approved links is what separates them.
 
 # 5. Limitations
 
-* **Synthetic data, TRAIN-only scores.** All matching scores are out-of-fold on the TRAIN labels. The rules were
+* Synthetic data, TRAIN-only scores. All matching scores are out-of-fold on the TRAIN labels. The rules were
   designed after reading those labels, so the hidden test set is the real measure. Tags at F1 1.000 mostly
   shows that the synthetic naming is regular.
-* **Thresholds from little data.** The auto threshold for work orders rests on ~850 auto-linked labelled
+* Thresholds from little data. The auto threshold for work orders rests on ~850 auto-linked labelled
   records; one more error would move it. The backlog cut-off rests on only 6 labelled work orders, and
   tags have no backlog at all because the labelled data gives no reason for one.
-* **Review band holds root causes.** 4 of the 8 root-cause work orders (including NR14's calibration) scored
+* Review band holds root causes. 4 of the 8 root-cause work orders (including NR14's calibration) scored
   in the review band, so the graph is incomplete until an engineer approves them.
-* **Sentence embeddings off.** `sentence-transformers` could not download its model in the build
+* Sentence embeddings off. `sentence-transformers` could not download its model in the build
   environment, so the embedding feature is empty. The other features made up for it here; on real free text
   it would matter more.
-* **Inferred passages after buffers** can be off by up to 69 min. They are flagged and carry
+* Inferred passages after buffers can be off by up to 69 min. They are flagged and carry
   `uncertainty_min`, but a query that ignores these flags can blame the wrong shift.
-* **Root causes are hypotheses.** Anomaly verdicts use defect lift over two weeks. The supplier-lot cause
+* Root causes are hypotheses. Anomaly verdicts use defect lift over two weeks. The supplier-lot cause
   needs a defect-to-part map (WL-104 → door seal), because pure statistics also flag every other lot built in the
   same days.
-* **GraphRAG.** It is evaluated on 20 questions, a smoke test rather than a benchmark. Asset-name matching
+* GraphRAG. It is evaluated on 20 questions, a smoke test rather than a benchmark. Asset-name matching
   uses exact `CONTAINS` ("TC1 supply fan" ≠ "Supply fan AHU-TC1"). The validator is regex-based (the read
   transaction is the real write guard). Questions and rows are sent to OpenAI; that is acceptable for
   synthetic data but not for a real plant without an approved deployment.
-* **GraphRAG scoring.** The automatic check passes an answer if the expected IDs appear anywhere in it, so it
-  misses answers that lead with the wrong record. Answers were reviewed by hand; a stricter grader (an LLM
+* GraphRAG scoring. The automatic check passes an answer if the expected IDs appear anywhere in it, so it
+  misses answers that lead with the wrong record. I reviewed the answers by hand; a stricter grader (an LLM
   judge, or checking the first claim) would be the next step.
-* **E3 link prediction** is a parameter-free aggregation, not a trained GNN. Its two settings were picked
-  from 6 combinations on the same labelled folds, so its scores are slightly optimistic. **Not attempted:** the
+* E3 link prediction is a parameter-free aggregation, not a trained GNN. Its two settings were picked
+  from 6 combinations on the same labelled folds, so its scores are slightly optimistic. Not attempted: the
   optional seeded data generator.
-* **Part A** compares documentation, not hands-on use: no vendor platform was used to build this pipeline.
-* **Neo4j Community**: a single instance, no role-based access, no clustering.
+* Part A compares documentation, not hands-on use: no vendor platform was used to build this pipeline.
+* Neo4j Community: a single instance, no role-based access, no clustering.
 
 # 6. What changes with real plant data
 
 **Scale (10 plants, 50,000 tags, 2 M VINs a year).** At 40 stations per car, passages alone reach 80 M edges
 a year, plus ~130 M `processedBy` edges. I would keep **assets, tags, work orders, defects, lots and
-anomalies in the graph**, and move the per-station passages to a **partitioned columnar store** (Parquet or
+anomalies in the graph, and move the per-station passages to a partitioned columnar store** (Parquet or
 Delta by plant and day), exactly like time-series values. The graph then gets only VIN → line-segment edges
 and the exceptions (inferred reads, rework, anomalies exposed). Each plant becomes its own space or database,
 with cross-plant queries through a shared asset type and supplier-lot layer. In Cognite, the same split is
 spaces + DMS for structure and the time-series API for values.
 
 **Matching.** Each plant has its own naming conventions, so parsing rules become per-plant configuration and
-the model is retrained per plant with **active learning**: the review queue is ordered by expected value
+the model is retrained per plant with active learning: the review queue is ordered by expected value
 (anomaly-explaining and low-margin items first) so the labels engineers give are the most useful. I would
-**measure on real data first**: label a random sample of 200 records per source and plant, compare with
+measure on real data first: label a random sample of 200 records per source and plant, compare with
 the synthetic scores, and track precision of auto-accepted links monthly. Drift appears when a new line or
 PLC naming scheme arrives.
 
