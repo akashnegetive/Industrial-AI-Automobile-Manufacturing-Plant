@@ -15,7 +15,18 @@ import pandas as pd
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+import importlib  # noqa: E402
+
+import ddn.review  # noqa: E402
 from ddn.config import STAGING  # noqa: E402
+
+# Streamlit keeps imported modules in memory between reruns: reload ddn.review when its file changed
+# (e.g. after git pull), so a running screen never mixes old and new code.
+_mtime = Path(ddn.review.__file__).stat().st_mtime
+if st.session_state.get("review_mtime") not in (None, _mtime):
+    importlib.reload(ddn.review)
+    st.cache_data.clear()
+st.session_state["review_mtime"] = _mtime
 from ddn.review import backlog, build_queue, load_decisions, pending, save_decision  # noqa: E402
 
 st.set_page_config(page_title="DDN-01 link review", layout="wide")
