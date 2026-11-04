@@ -96,7 +96,7 @@ outputs/        predictions for the hidden test set
 tests/          pytest suite (102 tests; graph tests skip if Neo4j is not running)
 notebooks/      data profiling notebook
 report/ slides/ final report (PDF + Markdown source) and interview slides
-docs/           research, ontology docs, laptop setup, design notes per stage (dayNN_explained.md)
+docs/           Part A research, ontology docs, laptop setup, demo guide, AI-assistant disclosure
 data/raw/       the data pack goes here (not committed)
 ```
 
