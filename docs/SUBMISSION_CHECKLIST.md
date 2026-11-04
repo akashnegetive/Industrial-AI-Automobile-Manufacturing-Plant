@@ -5,7 +5,7 @@
 | Git repo, README, one command (`docker compose up` + `make all`, or `run_all.bat`) | README.md | done |
 | Data profiling notebook | notebooks/01_data_profiling.ipynb | done |
 | Data-quality report, ontology file, pipeline code, graph loader, AI layer, tests | reports/02, ontology/, src/ddn/, tests/ (99) | done |
-| Report, 8–12 pages: Part A, design decisions, metrics, limitations, real-plant changes | report/REPORT.pdf (11 pages) | done, **after you check the Part A links (below)** |
+| Report, 8–12 pages: Part A, design decisions, metrics, limitations, real-plant changes | report/REPORT.pdf (11 pages) | done (Part A links checked) |
 | 5-minute demo video: one robot tag → graph node, one VIN end to end | docs/DEMO_SCRIPT.md; helpers `python -m ddn.demo tag` / `vin` | **you record it** |
 | Slides for the 45-minute interview | slides/DDN01_interview.pptx (27 slides, speaker notes) | done, **rehearse** |
 | Hidden-test predictions (Part C is scored on them) | outputs/predictions_*.csv | done |

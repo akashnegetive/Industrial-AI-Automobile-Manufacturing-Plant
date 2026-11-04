@@ -2,7 +2,7 @@
 
 Comparison of **Cognite Data Fusion (CDF)**, **Siemens** (Insights Hub, Industrial Information Hub, Industrial Copilot) and **AWS IoT TwinMaker**, based on vendor documentation. Each claim links to the page it comes from.
 
-> **Source status (draft, 23 Oct 2026).** This draft was compiled from search-engine extracts of the linked pages. The vendor sites could not be opened directly from the build environment. Before submission, every link must be opened and each claim checked against the live page. Claims marked ⚠ could not be confirmed from an official page.
+> **Sources.** Every link was opened and each claim checked against the live vendor page (Nov 2026; worksheet: `docs/part_a_link_check.md`). ⚠ marks a claim I searched for but could not find on an official page.
 
 ---
 

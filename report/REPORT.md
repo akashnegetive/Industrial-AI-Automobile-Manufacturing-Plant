@@ -24,9 +24,7 @@ Compared: **Cognite Data Fusion (CDF)**, **Siemens** (Insights Hub, Industrial I
 Copilot) and **AWS IoT TwinMaker**, from vendor documentation. The full version with every link is
 `docs/part_a_research.md`.
 
-<div class="note">Source status: the vendor sites could not be opened from the build environment, so these
-claims were compiled from search extracts of the linked official pages. Each link is to be opened and checked
-before submission; claims marked ⚠ were not confirmed on an official page.</div>
+<div class="note">Every link was opened and each claim checked against the live vendor page (November 2026). ⚠ marks a claim searched for but not found on an official page.</div>
 
 **How the plant is modelled.** CDF's *Data Modeling Service* separates **containers** (physical storage of
 properties), **views** (logical schemas over containers, which can rename, combine and inherit) and **data
@@ -376,7 +374,7 @@ The tuned score is optimistic because the prompt was adjusted on those questions
   uses exact `CONTAINS` ("TC1 supply fan" ≠ "Supply fan AHU-TC1"). The validator is regex-based (the read
   transaction is the real write guard). Questions and rows are sent to OpenAI; that is acceptable for
   synthetic data but not for a real plant without an approved deployment.
-* **Part A** sources still have to be verified against the live vendor pages.
+* **Part A** compares documentation, not hands-on use: no vendor platform was used to build this pipeline.
 * **Neo4j Community**: a single instance, no role-based access, no clustering.
 
 # 6. What changes with real plant data
