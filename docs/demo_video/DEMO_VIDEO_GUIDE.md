@@ -523,10 +523,68 @@ docker compose up -d
 ```
 
 
+# The seven assignment queries in the Neo4j browser
+
+The queries in `reports/12_graph_queries.md` use **parameters** (`$oven`, `$vin`, …), so the same query works
+for any oven, car or date. In the Neo4j browser you set them first:
+
+1. Copy the **:param** box for the query below into the top box and press **Ctrl + Enter**.
+2. Then copy that query's Cypher from `reports/12_graph_queries.md` (the grey block under its title) and run it.
+
+Times are `localdatetime(...)` because the graph stores them without a time zone; `datetime(...)` would give
+empty results. Queries D3b, D6, D6b and E1 need no parameters.
+
+**D1 – temperature sensors in Topcoat Oven 2**
+
+```
+:param {oven: 'DDN1-PNT-OV2', as_of: localdatetime('2026-09-15T00:00:00')}
+```
+
+**D2 – a water-leak car: sealer robots and their signals**
+
+```
+:param {vin: 'MDDA5XK0XD004375'}
+```
+
+**D3 – low wheel-nut torque, the nutrunner and its last calibration**
+
+```
+:param {from: localdatetime('2026-08-29T00:00:00'),
+        to: localdatetime('2026-09-05T00:00:00')}
+```
+
+**D4 – crater spike: upstream equipment ranked by alarms and humidity**
+
+```
+:param {inspection: 'DDN1-PNT-INSP-ST01',
+        from: localdatetime('2026-09-10T14:00:00'),
+        to: localdatetime('2026-09-10T17:00:00')}
+```
+
+**D5 – recall scope for a supplier lot**
+
+```
+:param {lot: 'WS-260904-B'}
+```
+
+**D7 – plant head: cars at risk and what inspection caught**
+
+```
+:param {lot: 'WS-260904-B', lot_from: localdatetime('2026-09-08T00:00:00'),
+        sealer: 'DDN1-PNT-SL-ST02-SR03',
+        seal_from: localdatetime('2026-09-09T06:04:00'),
+        seal_to: localdatetime('2026-09-09T10:18:00'),
+        robot: 'DDN1-BIW-L2-ST04-RB07',
+        weld_from: localdatetime('2026-09-07T13:17:00'),
+        weld_to: localdatetime('2026-09-08T15:09:00')}
+```
+
+
 # If something goes wrong
 
 | Problem | Fix |
 |---|---|
+| Neo4j says "ParameterMissing" | Run that query's `:param` box first (see "The seven assignment queries") |
 | "Can't connect to Neo4j" | Start Docker Desktop, then `docker compose up -d`, wait 1 minute |
 | "No module named ddn" | In window A, run `$env:PYTHONPATH = "src"` again |
 | Ask screen shows an error or an old answer | Ctrl + C in window B, start it again |
