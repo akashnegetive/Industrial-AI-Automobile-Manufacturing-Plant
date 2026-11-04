@@ -93,14 +93,8 @@ A browser tab opens at http://localhost:8502. Minimise window C.
 **Browser tabs, in this order:**
 1. **GitHub README:** https://github.com/akashnegetive/Industrial-AI-Automobile-Manufacturing-Plant (scroll so
    the "Results" table is visible).
-2. **Neo4j Browser:** http://localhost:7474. Log in (user `neo4j`, password `ddn-plant-2026`). Paste this query
-   into the top box but **don't run it yet**:
-   ```cypher
-   MATCH p = (a:Asset {fl: 'DDN1-BIW-L2-ST04-RB07'})-[r]-(x)
-   WHERE NOT x:Vehicle
-   RETURN p LIMIT 30
-   ```
-   (`NOT x:Vehicle` hides the hundreds of cars, so the picture stays readable.)
+2. **Neo4j Browser:** http://localhost:7474. Log in (user `neo4j`, password `ddn-plant-2026`). Copy the
+   queries for Scenes 3, 4b and 6 from this guide into a Notepad file, so you can paste them while recording.
 3. **Ask the plant:** http://localhost:8501
 4. **Review screen:** http://localhost:8502
 
