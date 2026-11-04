@@ -166,7 +166,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     ["1.000 / 0.982", "entity-matching F1", "tags / work orders, out-of-fold"],
     ["0", "wrong auto-accepted links", "precision 1.000 in the auto band"],
     ["8 / 8", "signal problems found", "1 judged a false alarm, with reasons"],
-    ["5 / 5", "unseen GraphRAG questions", "never a wrong fact in any run"],
+    ["4 / 5", "unseen GraphRAG questions", "manually reviewed; never an invented fact"],
   ];
   stats.forEach((st, i) => {
     const x = 0.5 + (i % 2) * 4.6, y = 1.3 + Math.floor(i / 2) * 1.75;
@@ -435,14 +435,14 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     showValue: true, dataLabelPosition: "outEnd", dataLabelColor: H.dk1, dataLabelFontSize: 11, dataLabelFontFace: "+mn-lt",
     showTitle: true, title: "Correct answers out of 10, per run", titleFontSize: 13, titleColor: H.dk2, titleFontFace: "+mn-lt" });
   s.addText([
-    { text: "5 / 5", options: { bold: true, fontSize: 40, color: C.accent1, fontFace: THEME.headFontFace, breakLine: true } },
-    { text: "on unseen held-out questions (run 6)", options: { bold: true, fontSize: 14, breakLine: true } },
+    { text: "4 / 5", options: { bold: true, fontSize: 40, color: C.accent1, fontFace: THEME.headFontFace, breakLine: true } },
+    { text: "on unseen questions, read by hand (the automatic check said 5 / 5)", options: { bold: true, fontSize: 14, breakLine: true } },
     { text: " ", options: { fontSize: 8, breakLine: true } },
     { text: "Run 5's held-out 2/5 showed overfitting; fixes were made by failure type, then a fresh held-out set was written.", options: { fontSize: 14, breakLine: true } },
     { text: " ", options: { fontSize: 8, breakLine: true } },
-    { text: "Every failure in every run was \"I don't know\", never a wrong fact.", options: { fontSize: 14, bold: true, color: C.text2 } },
+    { text: "No answer in any run contained an invented fact.", options: { fontSize: 14, bold: true, color: C.text2 } },
   ], { x: 5.9, y: 1.25, w: 3.6, h: 3.7, color: C.text1, valign: "top", margin: 0, isTextBox: true });
-  s.addNotes("Tell the story: 2/10 with gpt-4o-mini and a thin prompt; real relationship patterns, worked examples and direction checks took it to 7; the supplier-lot cause was missing from the graph itself (8 → 10). Then held-out 2/5 exposed overfitting, so fixes were made only by failure type, and a fresh held-out set scored 5/5. Run 5 also showed randomness, fixed with temperature 0.");
+  s.addNotes("Tell the story: 2/10 with gpt-4o-mini and a thin prompt; real relationship patterns, worked examples and direction checks took it to 7; the supplier-lot cause was missing from the graph itself (8 → 10). Then held-out 2/5 exposed overfitting, so fixes were made only by failure type, and a fresh held-out set passed 5/5 automatically, but reading the answers showed one led with a routine PM order instead of the repair: honestly 4/5. Run 5 also showed randomness, fixed with temperature 0.");
 
   // ============================================================ wrap-up
   pres.addSection({ title: "Wrap-up" });

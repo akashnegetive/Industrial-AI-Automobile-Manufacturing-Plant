@@ -194,7 +194,7 @@ quote.
 | Set | Score | Meaning |
 |---|---:|---|
 | 10 tuning questions | **10/10** | optimistic: the prompt was tuned on these |
-| Held-out round 2 (unseen) | **5/5** | **the number to quote** |
+| Held-out round 2 (unseen) | **4/5** on manual review (automatic check: 5/5) | **the number to quote** |
 | Held-out round 1 (used for fixes) | 4/5 | was 2/5 before the general fixes |
 
 Tuning stopped here on purpose: more fixes would only fit these questions.
@@ -204,7 +204,15 @@ asset is called "Supply fan AHU-TC1". `CONTAINS` is exact and case-sensitive, so
 the answer was "I don't know" rather than a wrong answer. Next step: an entity-lookup tool (a Neo4j full-text
 index or the Day 5 fuzzy matcher) that turns "AHU TC1 supply fan" into its fl before the query is written.
 
-**In one sentence for the interview:** every failure in every run was "I don't know", never a wrong fact.
+**Manual review caught one more miss.** Held-out question 3 ("which work order fixed the sealer robot nozzle
+problem?") passed the automatic check because 4102962 appeared in the answer, but the answer *led* with a
+routine PM order (4102593, "SL SR01 PM: dispenser check, nozzle replace") and gave the real repair second. The
+automatic check only tests that the expected IDs appear somewhere; it can't see which one the answer presents as
+the answer. Honest score: 4/5. Next step would be a stricter grader (LLM judge, or check the first claim).
+
+**In one sentence for the interview:** no answer in any run contained an invented fact (every cited value came
+from the graph); the failures were "I don't know" or, once, the wrong real record first, and reading the answers
+by hand caught what the automatic check missed.
 
 ## Results (`reports/14_graphrag.md`)
 

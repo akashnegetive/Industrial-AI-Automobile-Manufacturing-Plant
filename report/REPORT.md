@@ -13,8 +13,8 @@ one command (`run_all.bat` on Windows, `make all` elsewhere; 17 steps, 99 tests)
 **F1 1.000** and work orders with **F1 0.982** (out-of-fold on the TRAIN labels; the hidden test set is the
 real measure), with **0 wrong auto-accepted links**. The graph holds 165,706 nodes and 1.14 M relationships,
 answers the 7 required queries, contains 8 anomaly events (all 8 seeded signal problems found, 1 judged a
-false alarm), and supports a GraphRAG question box that scored **5/5 on unseen questions** and never
-stated a wrong fact in any run. All data is the synthetic DDN-01 pack.
+false alarm), and supports a GraphRAG question box that scored **10/10 on its evaluation set and 4/5 on unseen
+questions** (manually reviewed) and never stated an invented fact in any run. All data is the synthetic DDN-01 pack.
 
 </div>
 
@@ -309,6 +309,18 @@ including door seal WS-260904-B. Its one defect, D700356 *BW-017 weld nugget sma
 <p class="caption">Figure 2. Out-of-fold precision–recall curves, tags (left) and work orders (right), with the chosen auto-accept point.</p>
 </div>
 
+**Per source system and per rule (tags, rules baseline).** The ML matcher reaches F1 1.000 on every source
+system, so this table shows where the rules alone lose recall, and therefore what the ML layer has to fix:
+
+| Group | n | Rules F1 | Rules misses | Group | n | Rules F1 |
+|---|---:|---:|---:|---|---:|---:|
+| PI Historian | 381 | 0.989 | 8 | rule: exact | 495 | 1.000 |
+| S7 legacy OPC | 69 | 0.970 | 4 | rule: alias | 24 | 1.000 |
+| MES tags | 55 | 0.981 | 2 | rule: relocation | 6 | 1.000 |
+| WinCC SCADA | 34 | 1.000 | 0 | no rule fired | 14 | 0.000 |
+
+Rule precision is 1.000 everywhere: a rule that fires is right, and its only weakness is recall.
+
 **Where each method fails.** Rules miss **typos and unusual formats**: `DD1_` instead of `DDN1_`, glued
 sub-units like `PR2LUB`, and Hinglish text with no code. ML fixed 14 tag and 51 work-order records the rules got
 wrong or missed, and broke none. ML's remaining errors are **ambiguity**, not noise. "RB01 gun water leak"
@@ -330,10 +342,24 @@ of only 2 of 20 nutrunners. D5 shows the lot-id recall scope of **1,785 vehicles
 fitting time is used, which saves 293 good cars from a recall. D7 (plant head): 1,492 + 647 + 106 + 37 cars
 carried a known risk, and inspection caught only part of them.
 
-**Anomalies.** 8 events: **all 8 seeded signal problems found**, each linked to equipment, VINs, defects and a
-work order. 5 were judged quality-impacting, 1 an equipment problem (fan bearing, caught before failure), 1 a sensor
-fault (flat line while producing) and 1 a **false alarm**: the Oven 2 over-temperature was real but inside the
-bake window from the manual, and there were no extra defects on the cars in the oven. Problem 4 (the supplier
+**Anomalies.** 8 events: **all 8 seeded signal problems found**, each written into the graph on its equipment,
+with `exposedTo` edges to the VINs processed in the window (`reports/13`):
+
+| Event | Equipment | Window | VINs exposed | Top defect on exposed VINs | WO | Verdict |
+|---|---|---|---:|---|---|---|
+| AN-001 | Press PL1-PR1 | 02 Sep 10:04–16:34 | 300 | BP-031, every case (28) | 4102965 | quality |
+| AN-002 | Nutrunner NR14 | 03 Sep 08:30 – 04 Sep 10:40 | 646 | AU-077, every case (38) | 4102964 | quality |
+| AN-003 | Robot L2 RB07 | 07 Sep 12:45 – 08 Sep 15:14 | 663 | BW-017, 254× (103) | 4102961 | quality |
+| AN-004 | Sealer SR03 | 09 Sep 06:08–10:24 | 108 | WL-101, 2,364× (36) | 4102962 | quality |
+| AN-005 | AHU TC1 supply fan | 09 Sep 14:11 – 12 Sep 16:50 | 956 | PD-007, 2.4× (4) | 4102967 | equipment |
+| AN-006 | AHU TC2 | 10 Sep 13:04–15:34 | 27 | PD-020, every case (7) | 4102963 | quality |
+| AN-007 | E-coat TT-301 | 11 Sep 00:00–09:29 | 237 | – | 4102968 | sensor fault |
+| AN-008 | Oven 2 zone 3 | 12 Sep 02:04–03:34 | 19 | – | 4102966 | **false alarm** |
+
+Reasons for the three that are not quality problems. AN-005: vibration rose for 3 days but defects barely moved
+(2.4×), so it is an equipment problem caught before failure. AN-007: the signal flat-lined while the line was
+running, which is a data problem, not a process problem. AN-008: a real over-temperature, but under 2 h and under
++30 °C, inside the bake window from the oven manual, and the cars in the oven had no extra defects. Problem 4 (the supplier
 lot) has no signal; it is found through genealogy and loaded as a `causedBy → SupplierLot` hypothesis
 (`status=suggested`).
 
@@ -346,10 +372,14 @@ lot) has no signal; it is found through genealogy and loaded as a `causedBy → 
 | 3 | stations-of-a-line rule, variable check, citing IDs inside text | 8/10 | – |
 | 4 | supplier-lot cause in the graph; evidence expansion | 10/10 | – |
 | 5 | first held-out set; temperature 0 | 8/10 | 2/5 |
-| 6 | general fixes by failure type; **fresh** held-out set | **10/10** | **5/5** (round 1: 4/5) |
+| 6 | general fixes by failure type; **fresh** held-out set | **10/10** | **4/5** manual (5/5 automatic) |
 
-The tuned score is optimistic because the prompt was adjusted on those questions. The **unseen round-2 set
-(5/5)** is the fair number. In **every** run, every failure was "I don't know" and never a wrong fact.
+The tuned score is optimistic because the prompt was adjusted on those questions; the **unseen round-2 set** is
+the fair number. The automatic check only tests that the expected IDs appear in the answer. Reading the answers
+showed that one held-out answer ("which work order fixed the sealer nozzle problem?") **led with a routine PM
+order** (4102593) and gave the correct repair, 4102962, second. So it is **4/5 on manual review**. No answer
+in any run contained an invented fact: every cited value came from the graph. The 10 questions and the
+held-out set, with expected and actual answers, are in Appendix B.
 
 # 5. Limitations
 
@@ -374,6 +404,10 @@ The tuned score is optimistic because the prompt was adjusted on those questions
   uses exact `CONTAINS` ("TC1 supply fan" ≠ "Supply fan AHU-TC1"). The validator is regex-based (the read
   transaction is the real write guard). Questions and rows are sent to OpenAI; that is acceptable for
   synthetic data but not for a real plant without an approved deployment.
+* **GraphRAG scoring.** The automatic check passes an answer if the expected IDs appear anywhere in it, so it
+  misses answers that lead with the wrong record. Answers were reviewed by hand; a stricter grader (an LLM
+  judge, or checking the first claim) would be the next step.
+* **Not attempted:** E3 (link prediction, bonus) and the optional seeded data generator.
 * **Part A** compares documentation, not hands-on use: no vendor platform was used to build this pipeline.
 * **Neo4j Community**: a single instance, no role-based access, no clustering.
 

@@ -15,7 +15,7 @@ provenance on every edge**, then uses the graph for **anomaly detection** and **
 | Automatically contextualized | 99.4 % of tags, 95.9 % of work orders; the rest wait in the engineer review screen |
 | Knowledge graph | 165,706 nodes, 1,137,011 relationships, 0 edges without provenance, 0 ontology violations |
 | Anomaly detection | 8 / 8 seeded signal problems found, each linked to equipment, VINs, defects and a work order; 1 judged a false alarm, with reasons |
-| GraphRAG | 10 / 10 on the evaluation set, **5 / 5 on unseen held-out questions**; every failure in every run was "I don't know", never a wrong fact |
+| GraphRAG | 10 / 10 on the evaluation set, **4 / 5 on unseen held-out questions** (manually reviewed; the automatic check said 5 / 5); no answer in any run contained an invented fact |
 
 The hidden-test predictions for Part C are in [`outputs/`](outputs/): every tag and work order, with confidence
 and band.
@@ -104,6 +104,6 @@ data/raw/       the data pack goes here (not committed)
 The full list is in the report, section 5. In short: scores are out-of-fold on the TRAIN labels, so the hidden
 test set is the real measure. The data is synthetic and its naming more regular than a real plant's. 4 of the 8
 root-cause work orders wait in the review band. Root causes are stored as hypotheses (`status=suggested`).
-GraphRAG was evaluated on 20 questions and sends data to OpenAI, which is acceptable only for synthetic data.
+GraphRAG was evaluated on 20 questions with a lenient automatic check (answers were also read by hand) and sends data to OpenAI, which is acceptable only for synthetic data.
 
 Synthetic data only: no real customer or employer data is used.

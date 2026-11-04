@@ -20,7 +20,7 @@ end.** Everything below runs on the laptop after `run_all.bat` has finished (Neo
 | 2:00–2:30 | Neo4j Browser: `MATCH p=(a:Asset {fl:'DDN1-BIW-L2-ST04-RB07'})-[r]-(x) RETURN p LIMIT 40` | "Here is the same robot in the graph: its time series, work orders, the anomaly, the vehicles it welded." Click one edge to show the provenance properties. |
 | 2:30–4:00 | `.venv\Scripts\python -m ddn.demo vin` | "One car end to end." Route through 44 stations (point out any `inferred` passage: a missed RFID read filled from takt time); robots that welded it; torque results; parts and supplier lots; the cold-weld defect → `causedBy` AN-003 on robot RB07 → fixed by WO 4102961. "Every line is one Cypher query." |
 | 4:00–4:45 | ask_app: type *"Which robot caused the cold welds on 7 and 8 September, and which work order fixed it?"*, then *"Who was the shift supervisor on 9 September?"* | First: the cited answer; open the Cypher expander ("validated, read-only"). Second: **"I don't know"**. "No citation, no claim." |
-| 4:45–5:00 | `reports/14_graphrag.md` header or the report PDF | "Matching F1 1.000 tags / 0.982 work orders, 0 wrong auto-links, 8/8 anomalies, GraphRAG 5/5 on unseen questions. The limits are in the report." |
+| 4:45–5:00 | `reports/14_graphrag.md` header or the report PDF | "Matching F1 1.000 tags / 0.982 work orders, 0 wrong auto-links, 8/8 anomalies, GraphRAG 10/10, and 4/5 on unseen questions. The limits are in the report." |
 
 **If something goes wrong while recording:** stop and start again. Five minutes is short, so two or three
 takes is normal. If Neo4j isn't ready yet, wait for `docker compose ps` to show `healthy`.
