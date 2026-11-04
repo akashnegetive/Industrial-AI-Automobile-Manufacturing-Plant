@@ -12,35 +12,85 @@ in order → Export → 1080p). You can cut out any waiting.
 
 # Before you record (do this once)
 
-1. **Update and run everything.** In PowerShell, in the project folder:
+::: note
+**Copy tip:** every grey box can be copied as it is. Select the text in the box, press **Ctrl + C**, then in
+PowerShell press **Ctrl + V** (or right-click) and **Enter**. In the Neo4j browser, paste into the top box and
+press **Ctrl + Enter** (or the blue play button).
+:::
 
-   ```
-   git checkout -- reports docs/ontology.md outputs
-   git pull
-   .\run_all.bat
-   ```
-   Wait for **"All 18 steps done"** and **"102 passed"**.
+**1. Update and run everything.** Open PowerShell and copy:
 
-2. **Open three PowerShell windows** in the project folder:
-   - **Window A** (for the demo commands): type `$env:PYTHONPATH = "src"` and then `cls`.
-   - **Window B**: `.venv\Scripts\streamlit run apps\ask_app.py --server.port 8501`
-   - **Window C**: `.venv\Scripts\streamlit run apps\review_app.py --server.port 8502`
+```
+cd "C:\Users\AKASH\OneDrive\Desktop\akash\Industrial-AI-Automobile-Manufacturing-Plant"
+```
 
-3. **Open four browser tabs**, in this order:
-   1. Your GitHub page (the README, scrolled to the "Results" table)
-   2. Neo4j: <http://localhost:7474> (user `neo4j`, password `ddn-plant-2026`)
-   3. Ask the plant: <http://localhost:8501>
-   4. Review screen: <http://localhost:8502>
 
-4. **Open Notepad** and paste the four Neo4j queries from the last page of this guide, so you can copy them quickly.
+```
+git checkout -- reports docs/ontology.md outputs
+git pull
+```
 
-5. **Make things easy to read:** PowerShell text bigger (Ctrl + mouse wheel), browser zoom 125% (Ctrl + plus),
-   Windows "Do not disturb" on.
+Check that `git pull` does **not** say "error" or "Aborting". Then:
 
-6. **Never show your OpenAI key** on screen.
+```
+.\run_all.bat
+```
 
-7. **Recorder:** OBS Studio with **Display Capture** and your microphone (or Clipchamp → Record → Screen). Do a
-   10-second test and play it back.
+Wait for **"All 18 steps done"** and **"102 passed"**.
+
+**2. PowerShell window A** (for the demo commands). Open a new PowerShell and copy:
+
+```
+cd "C:\Users\AKASH\OneDrive\Desktop\akash\Industrial-AI-Automobile-Manufacturing-Plant"
+$env:PYTHONPATH = "src"
+cls
+```
+
+
+**3. PowerShell window B** (Ask the plant). Open a new PowerShell and copy:
+
+```
+cd "C:\Users\AKASH\OneDrive\Desktop\akash\Industrial-AI-Automobile-Manufacturing-Plant"
+.venv\Scripts\streamlit run apps\ask_app.py --server.port 8501
+```
+
+
+**4. PowerShell window C** (Review screen). Open a new PowerShell and copy:
+
+```
+cd "C:\Users\AKASH\OneDrive\Desktop\akash\Industrial-AI-Automobile-Manufacturing-Plant"
+.venv\Scripts\streamlit run apps\review_app.py --server.port 8502
+```
+
+
+**5. Browser tabs**, in this order (copy each address into a new tab):
+
+```
+https://github.com/akashnegetive/Industrial-AI-Automobile-Manufacturing-Plant
+```
+
+
+```
+http://localhost:7474
+```
+
+Neo4j login: user `neo4j`, password `ddn-plant-2026`.
+
+```
+http://localhost:8501
+```
+
+
+```
+http://localhost:8502
+```
+
+
+**6. Make things easy to read:** PowerShell text bigger (Ctrl + mouse wheel), browser zoom 125% (Ctrl + plus),
+Windows "Do not disturb" on. **Never show your OpenAI key** on screen.
+
+**7. Recorder:** OBS Studio with **Display Capture** and your microphone (or Clipchamp → Record → Screen). Do a
+10-second test and play it back.
 
 # Scene 1 – Introduction (about 25 seconds)
 
@@ -67,9 +117,13 @@ car, from start to end."
 # Scene 2 – One robot signal: from raw name to the graph (about 70 seconds)
 
 ::: do
-**DO:** Go to PowerShell window A. Type this and press Enter:
-`.venv\Scripts\python -m ddn.demo tag DDN1_BIW_L2_R07_WELDCUR.PV`
+**DO:** Go to PowerShell window A. Copy this, paste, press Enter:
 :::
+
+```
+.venv\Scripts\python -m ddn.demo tag DDN1_BIW_L2_R07_WELDCUR.PV
+```
+
 
 ::: say
 **SAY:** "This is one signal from the plant's sensor system. It is the weld current of a welding robot."
@@ -123,9 +177,19 @@ There was an anomaly on this signal, AN-003, and here is the work order that fix
 # Scene 3 – The same signal as a picture in the graph (about 30 seconds)
 
 ::: do
-**DO:** Go to browser tab 2 (Neo4j). Paste **Query 1** from Notepad and press the blue play button. A small
+**DO:** Go to browser tab 2 (Neo4j). Copy this query into the top box and press **Ctrl + Enter**. A small
 picture appears. If circles overlap, drag them with the mouse.
 :::
+
+```
+MATCH p1 = (t:TimeSeries {tag: 'DDN1_BIW_L2_R07_WELDCUR.PV'})
+           <-[:hasTimeSeries]-(a:Asset)
+MATCH p2 = (a)-[:partOf*1..5]->(:Site)
+OPTIONAL MATCH p3 = (t)-[:hasEvent]->(:AnomalyEvent)
+OPTIONAL MATCH p4 = (a)-[:hasEvent]->(:AnomalyEvent)
+RETURN p1, p2, p3, p4
+```
+
 
 ::: say
 **SAY:** "This is the same signal in the graph. The signal hangs under robot 7. The robot is in station 4, the
@@ -145,9 +209,14 @@ So nobody has to guess where a link came from."
 # Scene 4 – One car from start to end (about 80 seconds)
 
 ::: do
-**DO:** Go to PowerShell window A. Type `cls` and Enter. Then type this and press Enter:
-`.venv\Scripts\python -m ddn.demo vin`
+**DO:** Go to PowerShell window A. Copy this, paste, press Enter:
 :::
+
+```
+cls
+.venv\Scripts\python -m ddn.demo vin
+```
+
 
 ::: say
 **SAY:** "Now one car, from start to end. This car was built on the 8th of September."
@@ -192,8 +261,18 @@ robot 7. That is the same robot as in my first example. And here is the work ord
 # Scene 4b – The same car as a picture (about 20 seconds, optional)
 
 ::: do
-**DO:** Go to the Neo4j tab. Paste **Query 2** and press play.
+**DO:** Go to the Neo4j tab. Copy this query into the top box and press **Ctrl + Enter**:
 :::
+
+```
+MATCH p1 = (v:Vehicle {vin: 'MDDA5XK00D003924'})-[:hasDefect]->(:Defect)
+            -[:causedBy]->(e:AnomalyEvent)<-[:hasEvent]-(:Asset)
+MATCH p2 = (v)-[:containsPart]->(:Part {part_no: 'DOOR_SEAL'})
+           -[:fromLot]->(:SupplierLot)
+MATCH p3 = (v)-[:exposedTo]->(e)
+RETURN p1, p2, p3
+```
+
 
 ::: say
 **SAY:** "And this is the same car as a picture: the car, its defect, the anomaly that caused it, and the robot
@@ -204,10 +283,14 @@ of spreadsheets is now one query."
 # Scene 5 – Ask the plant a question (about 60 seconds)
 
 ::: do
-**DO:** Go to browser tab 3 (Ask the plant). Click the **Question** box and type:
-*Which robot caused the cold welds on 7 and 8 September, and which work order fixed it?*
-Press Enter and wait a few seconds.
+**DO:** Go to browser tab 3 (Ask the plant). Click the **Question** box, paste this question, press Enter and
+wait a few seconds:
 :::
+
+```
+Which robot caused the cold welds on 7 and 8 September, and which work order fixed it?
+```
+
 
 ::: say
 **SAY (while it loads):** "Here I can ask a question in normal English. An AI model turns my question into a
@@ -228,8 +311,13 @@ work order. If a sentence has no source, my code removes it. No source, no claim
 :::
 
 ::: do
-**DO:** Type a second question: *Who was the shift supervisor on 9 September?* and press Enter.
+**DO:** Paste this second question and press Enter:
 :::
+
+```
+Who was the shift supervisor on 9 September?
+```
+
 
 ::: say
 **SAY:** "And when the data does not have the answer, it says 'I don't know'. It does not guess. In my tests it
@@ -239,8 +327,16 @@ never made up a fact."
 # Scene 6 – A person checks a link, and the graph updates (about 60 seconds)
 
 ::: do
-**DO (6a):** Go to the Neo4j tab. Paste **Query 3** and press play. It shows **no records**.
+**DO (6a):** Go to the Neo4j tab. Copy this query into the top box and press **Ctrl + Enter**. It shows **no
+records**:
 :::
+
+```
+MATCH (a:Asset)-[r:hasWorkOrder]->(w:WorkOrder {wo_number: '4102964'})
+RETURN a.fl AS asset, r.method AS method, r.confidence AS confidence,
+       r.status AS status, r.evidence AS evidence
+```
+
 
 ::: say
 **SAY:** "This work order, number 4102964, is about the calibration of a tightening tool. The model was not sure
@@ -249,9 +345,14 @@ the graph."
 :::
 
 ::: do
-**DO (6b):** Go to browser tab 4 (Review screen). In the search box on the left, type **4102964**. Read the text,
-look at the proposed machine (nutrunner 14), then click **Approve**.
+**DO (6b):** Go to browser tab 4 (Review screen). Paste this number into the **search box** on the left, read the
+text, look at the proposed machine (nutrunner 14), then click **Approve**:
 :::
+
+```
+4102964
+```
+
 
 ::: say
 **SAY:** "Here an engineer checks the links the model is not sure about. The text says NR14, and the proposed
@@ -259,18 +360,30 @@ machine is nutrunner 14. That is correct, so I approve it. The decision is saved
 :::
 
 ::: do
-**DO (6c):** Go to PowerShell window A. Type this and press Enter:
-`.venv\Scripts\python -m ddn.graph --decisions`
+**DO (6c):** Go to PowerShell window A. Copy this, paste, press Enter:
 :::
+
+```
+.venv\Scripts\python -m ddn.graph --decisions
+```
+
 
 ::: say
 **SAY:** "Now I put the decision into the graph. It takes only a few seconds."
 :::
 
 ::: do
-**DO (6d):** Go back to the Neo4j tab. Run **Query 3** again (press play). Now there is **one row**, with
-method **engineer**.
+**DO (6d):** Go back to the Neo4j tab. Run the **same query** again (Ctrl + Enter, or copy it again):
 :::
+
+```
+MATCH (a:Asset)-[r:hasWorkOrder]->(w:WorkOrder {wo_number: '4102964'})
+RETURN a.fl AS asset, r.method AS method, r.confidence AS confidence,
+       r.status AS status, r.evidence AS evidence
+```
+
+Now there is **one row**, with method **engineer**.
+
 
 ::: say
 **SAY:** "Same query, and now the link is there. It says 'engineer', with who approved it and when. The model
@@ -288,10 +401,17 @@ suggests the three most likely machines."
 :::
 
 ::: note
-**Before Scene 6:** run Query 3 once without recording. If it **already shows a row**, you approved this work
-order earlier. Then use another clearly correct item that is not decided yet (for example **4102961**, robot 7's
-weld gun), and change the number in Query 3. Approve only links you are sure about: decisions are real data.
+**Before Scene 6:** run the 6a query once without recording. If it **already shows a row**, you approved this
+work order earlier. Then use **4102961** (robot 7's weld gun) instead: search for it in the review screen, and use
+this query in 6a and 6d. Approve only links you are sure about: decisions are real data.
 :::
+
+```
+MATCH (a:Asset)-[r:hasWorkOrder]->(w:WorkOrder {wo_number: '4102961'})
+RETURN a.fl AS asset, r.method AS method, r.confidence AS confidence,
+       r.status AS status, r.evidence AS evidence
+```
+
 
 # Scene 7 – Closing (about 15 seconds)
 
@@ -314,34 +434,94 @@ don't know'. The limits are written in my report. Thank you for watching."
 4. Upload to YouTube: studio.youtube.com → Create → Upload → Visibility **Unlisted** → copy the link.
 5. Put the link in the README, or send it to me and I will add it.
 
-# Neo4j queries (copy these into Notepad)
+# All commands in one place
 
-**Query 1 – the signal as a node (Scene 3)**
+**PowerShell window A**
 
 ```
-MATCH p1 = (t:TimeSeries {tag: 'DDN1_BIW_L2_R07_WELDCUR.PV'})<-[:hasTimeSeries]-(a:Asset)
+cd "C:\Users\AKASH\OneDrive\Desktop\akash\Industrial-AI-Automobile-Manufacturing-Plant"
+$env:PYTHONPATH = "src"
+```
+
+
+```
+.venv\Scripts\python -m ddn.demo tag DDN1_BIW_L2_R07_WELDCUR.PV
+```
+
+
+```
+.venv\Scripts\python -m ddn.demo vin
+```
+
+
+```
+.venv\Scripts\python -m ddn.graph --decisions
+```
+
+
+**Window B and C (the two screens)**
+
+```
+.venv\Scripts\streamlit run apps\ask_app.py --server.port 8501
+```
+
+
+```
+.venv\Scripts\streamlit run apps\review_app.py --server.port 8502
+```
+
+
+**Neo4j: the signal as a node (Scene 3)**
+
+```
+MATCH p1 = (t:TimeSeries {tag: 'DDN1_BIW_L2_R07_WELDCUR.PV'})
+           <-[:hasTimeSeries]-(a:Asset)
 MATCH p2 = (a)-[:partOf*1..5]->(:Site)
 OPTIONAL MATCH p3 = (t)-[:hasEvent]->(:AnomalyEvent)
 OPTIONAL MATCH p4 = (a)-[:hasEvent]->(:AnomalyEvent)
 RETURN p1, p2, p3, p4
 ```
 
-**Query 2 – the car as a picture (Scene 4b)**
+
+**Neo4j: the car as a picture (Scene 4b)**
 
 ```
-MATCH p1 = (v:Vehicle {vin: 'MDDA5XK00D003924'})-[:hasDefect]->(:Defect)-[:causedBy]->(e:AnomalyEvent)<-[:hasEvent]-(:Asset)
-MATCH p2 = (v)-[:containsPart]->(:Part {part_no: 'DOOR_SEAL'})-[:fromLot]->(:SupplierLot)
+MATCH p1 = (v:Vehicle {vin: 'MDDA5XK00D003924'})-[:hasDefect]->(:Defect)
+            -[:causedBy]->(e:AnomalyEvent)<-[:hasEvent]-(:Asset)
+MATCH p2 = (v)-[:containsPart]->(:Part {part_no: 'DOOR_SEAL'})
+           -[:fromLot]->(:SupplierLot)
 MATCH p3 = (v)-[:exposedTo]->(e)
 RETURN p1, p2, p3
 ```
 
-**Query 3 – the review loop, before and after (Scene 6)**
+
+**Neo4j: review loop before and after (Scene 6)**
 
 ```
 MATCH (a:Asset)-[r:hasWorkOrder]->(w:WorkOrder {wo_number: '4102964'})
 RETURN a.fl AS asset, r.method AS method, r.confidence AS confidence,
        r.status AS status, r.evidence AS evidence
 ```
+
+
+**Questions for Ask the plant (Scene 5)**
+
+```
+Which robot caused the cold welds on 7 and 8 September, and which work order fixed it?
+```
+
+
+```
+Who was the shift supervisor on 9 September?
+```
+
+
+**If Neo4j is not running**
+
+```
+docker compose up -d
+```
+
 
 # If something goes wrong
 
