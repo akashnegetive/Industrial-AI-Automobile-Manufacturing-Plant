@@ -5,7 +5,7 @@ orders, drawings, alarms, defects) to one asset hierarchy. It loads them into a 
 provenance on every edge**, then uses the graph for **anomaly detection** and **grounded question answering
 (GraphRAG)**. Built on the synthetic Plant DDN-01 data pack (1–14 Sep 2026).
 
-**Report:** [`report/REPORT.pdf`](report/REPORT.pdf) · **Slides:** [`slides/DDN01_interview.pptx`](slides/DDN01_interview.pptx) · **Demo video (5 min):** *link to be added*
+**Report:** [`report/REPORT.pdf`](report/REPORT.pdf) · **Slides:** [`slides/DDN01_interview.pptx`](slides/DDN01_interview.pptx) · **Demo video (5 min):** [youtu.be/86zMkBF6CfI](https://youtu.be/86zMkBF6CfI)
 
 ## Results
 
