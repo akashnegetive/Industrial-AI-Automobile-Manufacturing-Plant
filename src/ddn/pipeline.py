@@ -71,17 +71,23 @@ def check_data() -> None:
 def main() -> None:
     check_data()
     from .graph import neo4j_available
-    print("Checking Neo4j (bolt://localhost:7687) ...", flush=True)
-    graph_ok = neo4j_available()
-    if not graph_ok:
-        print("Neo4j is not reachable - the 2 graph steps will be SKIPPED. Start it with `docker compose up -d` "
-              "(Docker Desktop must be running) and run again.")
-    steps = STEPS + (GRAPH_STEPS if graph_ok else [])
+    total = len(STEPS) + len(GRAPH_STEPS)
     start = time.time()
-    for n, (module, label) in enumerate(steps, 1):
-        print(f"\n[{n}/{len(steps)}] {label}  ({module})", flush=True)
+    for n, (module, label) in enumerate(STEPS, 1):
+        print(f"\n[{n}/{total}] {label}  ({module})", flush=True)
         importlib.import_module(module).main()
-    print(f"\nAll {len(steps)} steps done in {time.time() - start:.0f} s"
+    # Checked only now: Neo4j started by `docker compose up -d` has had the whole first part to come up.
+    print("\nChecking Neo4j (bolt://localhost:7687) ...", flush=True)
+    graph_ok = neo4j_available(wait_s=300)
+    if graph_ok:
+        for n, (module, label) in enumerate(GRAPH_STEPS, len(STEPS) + 1):
+            print(f"\n[{n}/{total}] {label}  ({module})", flush=True)
+            importlib.import_module(module).main()
+    else:
+        print(f"Neo4j is not reachable - the {len(GRAPH_STEPS)} graph steps are SKIPPED. Start it with "
+              "`docker compose up -d` (Docker must be running) and run again.")
+    done = len(STEPS) + (len(GRAPH_STEPS) if graph_ok else 0)
+    print(f"\nAll {done} steps done in {time.time() - start:.0f} s"
           + ("" if graph_ok else " (graph steps skipped)") + f". Reports are in {ROOT / 'reports'}.")
     if "--no-tests" not in sys.argv:
         print("\nRunning tests ...", flush=True)

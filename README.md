@@ -9,12 +9,17 @@ Industrial AI take-home assignment: link siloed car-plant data to one asset mode
 1. From the unzipped candidate pack, copy
    - the `data/` files into `data/raw/` (see `data/raw/README.md`), and
    - the `documents/` folder into `docs/source_pack/` (see `docs/source_pack/README.md`).
-2. Run everything (first run also creates `.venv` and installs requirements):
+2. Run everything with **one command** (the first run creates `.venv` and installs the requirements; Docker
+   must be running for the graph steps):
 
 | System | One command |
 |---|---|
-| Windows | double-click `run_all.bat`, or in PowerShell: `.\run_all.ps1` |
-| Mac / Linux | `make setup` (first time), then `make all` |
+| Mac / Linux | `docker compose up -d && make all` |
+| Windows | double-click `run_all.bat`, or in PowerShell `.\run_all.ps1` (it runs `docker compose up -d` itself) |
+
+Needs Python 3.11+ and Docker (Neo4j 5 runs in it). The first run takes about 15 minutes; expected output per
+step is in `docs/LAPTOP_SETUP.md`. Optional: `OPENAI_API_KEY` for GraphRAG with an LLM; without it the
+GraphRAG step runs an offline template baseline, so the pipeline and tests still complete.
 
 Both run the same steps (`src/ddn/pipeline.py`): reports in `reports/`, staging tables in `data/staging/`, then the tests.
 
@@ -26,10 +31,10 @@ Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs
 | Part | Status | Output |
 |---|---|---|
 | B.1 Dataset profiles | done | `reports/01_dataset_profile.md` |
-| B.2 Data-quality report (37 issues) | done | `reports/02_data_quality.md` |
+| B.2 Data-quality report (38 issues, 15 not in the data dictionary) | done | `reports/02_data_quality.md` |
 | B.3 Identity schemes | done | `reports/03_identity_schemes.md` |
 | B.4 Production problems (9, with evidence) | done | `reports/04_production_problems.md` |
-| A Vendor research | draft, links to verify | `docs/part_a_research.md` |
+| A Vendor research (Cognite, Siemens, AWS; every link checked) | done | `docs/part_a_research.md` |
 | D Ontology v1.3 (18 node, 19 edge types) | done | `ontology/ontology_v1.yaml`, `docs/ontology.md` |
 | C1 Staging (typed Parquet, deg F -> deg C) | done | `data/staging/` (generated) |
 | C Rules baseline: tags F1 0.987, work orders F1 0.950 | done | `reports/05_matching_rules_baseline.md` |

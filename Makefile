@@ -2,8 +2,13 @@ PY ?= .venv/bin/python
 export PYTHONPATH := src
 
 .PHONY: setup profile quality identity problems ontology stage match ml graph queries review reports test all
-setup:
-	python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# The venv is a real target: any command below creates it first, so a fresh clone needs no separate setup.
+$(PY):
+	python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Python 3.11 or newer is needed")'
+	python3 -m venv .venv
+	.venv/bin/python -m pip install -q --upgrade pip
+	.venv/bin/pip install -q -r requirements.txt
+setup: $(PY)
 profile:            ## Part B.1 dataset profiles
 	$(PY) -m ddn.profile
 quality:            ## Part B.2 data-quality report
@@ -29,7 +34,7 @@ review:             ## engineer review screen (Streamlit)
 reports: profile quality identity problems ontology match ml
 test:
 	$(PY) -m pytest -q
-all:                ## everything: same steps as run_all.ps1 on Windows
+all: $(PY)          ## everything: same steps as run_all.ps1 on Windows (creates .venv on first run)
 	$(PY) -m pip install -q -r requirements.txt
 	-docker compose up -d
 	$(PY) -m ddn.pipeline

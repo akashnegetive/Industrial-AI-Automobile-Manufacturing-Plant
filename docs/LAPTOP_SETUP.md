@@ -97,7 +97,7 @@ goes to GitHub. Don't paste it into chat, screenshots or the demo video.
 | `OCR NOT used` | Tesseract not installed | Install it (table above) |
 | `python is not recognized` | Python not on PATH | Reinstall Python with "Add to PATH" ticked |
 | Old step/test count after `git pull` | Pull was aborted | Read the `git pull` output; usually the first fix in this table |
-| `Neo4j is not reachable - the 2 graph steps will be SKIPPED` | Docker Desktop not running | Start Docker Desktop, wait for "Engine running", run again |
+| `Neo4j is not reachable - the 3 graph steps are SKIPPED` | Docker Desktop not running | Start Docker Desktop, wait for "Engine running", run again |
 | `docker compose up` fails with a port error | Port 7474/7687 already used (another Neo4j) | Stop the other Neo4j, or `docker compose down` then up |
 | Graph load very slow / out of memory | Docker has too little RAM | Docker Desktop → Settings → Resources: give it at least 4 GB |
 | `graphrag (offline)` although you set the key | PowerShell window opened before `setx` | Close and reopen PowerShell; check `echo $env:OPENAI_API_KEY` |
