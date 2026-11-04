@@ -9,14 +9,15 @@
 | 5-minute demo video: one robot tag → graph node, one VIN end to end | recorded; guide in docs/demo_video/DEMO_VIDEO_GUIDE.pdf | **edit, upload, put the link in the README** |
 | Slides for the 45-minute interview | slides/DDN01_interview.pptx (31 slides, speaker notes) | done; **rehearse** |
 | Hidden-test predictions (Part C is scored on them) | outputs/predictions_*.csv | done |
-| AI-assistant disclosure | docs/AI_USAGE.md | **finish the [to do] rows** |
+| AI-assistant disclosure | docs/AI_USAGE.md | **fill the empty "How I verified" cells** |
 
 ## Still to do (only you can)
 
 1. **Video:** finish editing, upload as *Unlisted* (YouTube) or share from Google Drive ("Anyone with the
    link"), and replace *"link to be added"* in the third line of README.md (or send the link to have it added).
-2. **docs/AI_USAGE.md:** do the remaining **[to do]** checks, rewrite each in your own words in the past tense,
-   then delete the `<!-- DRAFT ... -->` comment near the top. Every line must be true: interview question 6.
+2. **docs/AI_USAGE.md:** fill the empty "How I verified" cells, in your own words and in the past tense. The
+   check for each row is in `docs/AI_USAGE_checks_todo.md` on the `study-notes` branch. Every line must be
+   true: interview question 6.
 3. **Rehearse the slides once with a timer** (slide 2 has the 45-minute plan; the speaker notes say what to explain).
 4. **Optional:** commit `data/review/decisions.csv` if you want the evaluators to see your review decisions.
 5. **On the day:** `git pull`, `run_all.bat` once, then start Neo4j and both Streamlit screens (after the pull).
