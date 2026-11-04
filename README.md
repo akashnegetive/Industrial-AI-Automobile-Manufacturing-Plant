@@ -82,7 +82,7 @@ Run these with `PYTHONPATH=src` and the `.venv` Python. The Neo4j browser is at 
 | C – Matching (rules vs ML), documents/OCR, work orders (ISO 14224), VIN traceability, review | [`reports/05`–`10`](reports/), [`apps/review_app.py`](apps/review_app.py), [`outputs/`](outputs/) |
 | D – Ontology, graph load, the 7 queries | [`ontology/`](ontology/), [`reports/11`–`12`](reports/) |
 | E – Anomaly detection, GraphRAG, E3 link prediction (bonus) | [`reports/13`–`15`](reports/), [`apps/ask_app.py`](apps/ask_app.py) |
-| Report, slides, demo script | [`report/`](report/), [`slides/`](slides/), [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) |
+| Report, slides | [`report/`](report/), [`slides/`](slides/) |
 | AI-assistant disclosure | [`docs/AI_USAGE.md`](docs/AI_USAGE.md) |
 
 ## Repository layout
@@ -96,7 +96,7 @@ outputs/        predictions for the hidden test set
 tests/          pytest suite (102 tests; graph tests skip if Neo4j is not running)
 notebooks/      data profiling notebook
 report/ slides/ final report (PDF + Markdown source) and interview slides
-docs/           Part A research, ontology docs, laptop setup, demo guide, AI-assistant disclosure
+docs/           Part A research and link check, ontology docs, laptop setup, AI-assistant disclosure
 data/raw/       the data pack goes here (not committed)
 ```
 

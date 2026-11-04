@@ -7,8 +7,9 @@ code, tests and documentation day by day, and explained each part. I ran every s
 (Windows, `run_all.bat`), checked results against the raw data files and the assignment's own numbers, and
 reported every failure I hit; the fixes are in the git history.
 
-The study notes the assistant wrote for me while building (`docs/LEARNING_GUIDE.md`, `docs/dayNN_explained.md`)
-are kept on the separate branch `study-notes`, not on `main`; they are listed below for completeness.
+Personal working material (study notes `docs/LEARNING_GUIDE.md` and `docs/dayNN_explained.md`, the demo script and
+the submission checklist) is kept on the separate branch `study-notes`, not on `main`; it is listed below for
+completeness.
 
 | Date | File(s) | What the AI did | How I verified |
 |---|---|---|---|

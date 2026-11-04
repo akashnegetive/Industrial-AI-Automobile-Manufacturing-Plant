@@ -49,7 +49,7 @@ git pull                                     # get the day's work
 | 10 | 17 | 99 | `predictions_tag_to_asset.csv: 1,541 records, 1,002 not in TRAIN` (new step 9, ddn.export) |
 | 10 (final) | 18 | 102 | `Work orders: ... thresholds auto 0.93 review 0.09`, `link prediction: hit@1 0.820 ... 52 backlog records routed to review with top 3` |
 
-If your numbers differ from this table, or a step fails, paste the last ~30 lines of the output into the chat.
+If your numbers differ from this table, or a step fails, the last ~30 lines of the output show which step and why.
 
 ## 5. Day 7 additions: Neo4j and the review screen
 
@@ -78,7 +78,7 @@ Optional: `setx DDN_LLM_MODEL "gpt-4o-mini"` to use a different model (default `
 no-LLM baseline for one run: `$env:DDN_LLM = "offline"`.
 
 The key lives only in your Windows user environment. It is never written to a file in the project and never
-goes to GitHub. Don't paste it into chat, screenshots or the demo video.
+goes to GitHub. Never put it in a chat, a screenshot or a video.
 
 - `run_all` step 16 asks the 10 evaluation questions and writes `reports\14_graphrag.md` (the 10 questions cost a
   few cents with gpt-4o).
