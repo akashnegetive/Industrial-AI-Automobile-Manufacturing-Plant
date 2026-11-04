@@ -111,7 +111,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     { text: "From siloed plant records to a trustworthy knowledge graph", options: { breakLine: true } },
     { text: "Industrial AI take-home · AKASH · November 2026", options: { fontSize: 14, color: C.accent1 } },
   ], { placeholder: "body" });
-  s.addNotes("Introduce yourself in one sentence. Then: 'I built a working pipeline that links the plant's siloed records to one asset hierarchy, loads them into a Neo4j knowledge graph with provenance on every edge, and uses that graph for anomaly detection and grounded question answering. Everything runs with one command on the synthetic DDN-01 pack. I'll show results, design choices and the limits, then walk through the code.'");
+  s.addNotes("I introduce myself in one sentence. I built a working pipeline that links the plant's siloed records to one asset hierarchy, loads them into a Neo4j knowledge graph with provenance on every edge, and uses the graph for anomaly detection and grounded question answering. It runs with one command on the synthetic DDN-01 pack. I show the results, the design choices and the limits, then walk through the code.");
 
   // ============================================================ agenda
   s = content("Plan for the 45 minutes", "Opening");
@@ -133,7 +133,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     s.addText([{ text: a[1] + "  ", options: { bold: true, color: C.text2 } }, { text: a[2], options: { color: C.text1 } }],
       { x: 1.7, y, w: 7.8, h: 0.4, fontSize: 14, valign: "middle", margin: 0, isTextBox: true });
   });
-  s.addNotes("Say the plan in one sentence and keep to it: about 30 minutes of slides, then live demo and code. If they interrupt with questions, use the backup slides at the end.");
+  s.addNotes("I keep to this plan: about 30 minutes of slides, then the live demo and the code. If questions come early, I answer them with the backup slides at the end.");
 
   // ============================================================ 2 problem
   s = content("One robot, five names", "Opening");
@@ -154,7 +154,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     { text: "Defects never name a machine", options: { bold: true, fontSize: 16, breakLine: true } },
     { text: "Only VIN → station → time → equipment connects a defect to its cause.", options: { fontSize: 14 } },
   ], { x: 6.7, y: 2.1, w: 2.6, h: 2.6, color: C.text1, valign: "top", margin: 0, isTextBox: true });
-  s.addNotes("The core problem: one physical robot has five identities. Point at R07 vs RB07, and the drawing's RB-207 which means line 2 robot 07. Defects are logged against VIN and inspection point only, so without contextualization you cannot ask 'which machine caused this'.");
+  s.addNotes("The core problem: one physical robot has five identities. I point at R07 vs RB07, and at RB-207 on the drawing, which means line 2 robot 07. Defects are logged against VIN and inspection point only, so without contextualization nobody can ask which machine caused a defect.");
 
   // ============================================================ 3 what I built
   s = content("What I built", "Opening");
@@ -180,7 +180,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   ], { x: 0.5, y: 4.05, w: 9, h: 0.5, fontSize: 14, color: C.text2, margin: 0, isTextBox: true });
   s.addText("Thresholds, review band and backlog follow the assignment's Figure 1; thresholds come from the precision–recall curve, not from the example values.",
     { x: 0.5, y: 4.5, w: 9, h: 0.5, fontSize: 12, italic: true, color: C.accent5, margin: 0, isTextBox: true });
-  s.addNotes("Walk left to right. Stress two design rules: only confident or engineer-approved links enter the graph, and every edge carries provenance so anyone can ask 'why does the graph think this?'.");
+  s.addNotes("I go left to right. Two rules hold throughout: only confident or engineer-approved links enter the graph, and every edge carries provenance, so anyone can ask why the graph believes something.");
 
   // ============================================================ 4 results
   s = content("Results at a glance", "Opening");
@@ -199,7 +199,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   });
   s.addText("Matching scores are out-of-fold on the TRAIN labels; the evaluator's hidden test set is the real measure (predictions in outputs/).",
     { x: 0.5, y: 4.85, w: 9, h: 0.3, fontSize: 11, italic: true, color: C.accent5, margin: 0, isTextBox: true });
-  s.addNotes("Give the four numbers, then immediately the caveat: TRAIN out-of-fold, so hidden test is the real measure. Being honest about this early builds trust.");
+  s.addNotes("I give the four numbers and the caveat straight away: the matching scores are out-of-fold on the TRAIN labels, so the hidden test set is the real measure.");
 
   // ============================================================ Part A
   pres.addSection({ title: "Part A – Research" });
@@ -225,7 +225,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     { text: "rules and confirmed matches before ML · confidence + status on every link · decisions reused as labels · container/view split · values outside the graph" },
   ], { x: 1.15, y: 4.05, w: 8.35, h: 0.65, fontSize: 14, color: C.text1, valign: "middle", margin: 0, isTextBox: true });
   s.addText("Every claim is cited to vendor documentation in docs/part_a_research.md.", { x: 0.5, y: 4.8, w: 9, h: 0.3, fontSize: 11, italic: true, color: C.accent5, margin: 0, isTextBox: true });
-  s.addNotes("Cognite is the most explicit about predicted links and confidence; Siemens and AWS mostly configure links rather than predict them. Say which idea you borrowed for which part. Admit gaps: no named Cognite automotive case found; AAS support in Siemens is a separate product (assetfox).");
+  s.addNotes("Cognite is the most explicit about predicted links and confidence; Siemens and AWS mostly configure links rather than predict them. For each part I name the idea I borrowed. Gaps I found: no named Cognite automotive case, and AAS support at Siemens is a separate product (SITRANS assetfox).");
 
   // ============================================================ Part B
   pres.addSection({ title: "Part B – Data" });
@@ -253,7 +253,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     [T("SAP failure codes "), { text: "contradict the WO text" }],
     [T("Lot id reused "), { text: "across two fitting sessions" }],
   ], 14), { x: 6.1, y: 1.3, w: 3.4, h: 3.6, valign: "top", margin: 0, isTextBox: true });
-  s.addNotes("Every issue has a count and examples you can verify (reports/02). The ones not in the dictionary are the interesting ones: relocated robot, S3 vs ST03, lot id reuse. These later explain matcher errors and the recall scope.");
+  s.addNotes("Every issue has a count and examples that can be checked in reports/02. The interesting ones are those not in the data dictionary: the relocated robot, S3 instead of ST03, the reused lot id. They explain matcher errors and the recall scope later.");
 
   s = content("Nine real production problems", "Part B – Data");
   table(s, [
@@ -268,7 +268,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     ["8", "AHU TC1 fan bearing wear", "–", "–", "caught early"],
     ["9", "E-coat TT-301 transmitter frozen", "–", "–", "sensor fault"],
   ], { x: 0.5, y: 1.2, w: 9, colW: [0.4, 4.6, 1.2, 1.7, 1.1], fontSize: 12, rowH: 0.37 });
-  s.addNotes("Method: anomaly window → VINs exposed at that equipment → defect rate vs all other VINs. Highlight #4: the lot id was reused, so recall by lot id alone includes 293 good cars. #7 is the deliberate false alarm.");
+  s.addNotes("My method: anomaly window, then the VINs exposed at that equipment, then their defect rate against all other VINs. Number 4 matters most: the lot id was reused, so a recall by lot id alone would include 293 good cars. Number 7 is a false alarm.");
 
   // ============================================================ Part C
   pres.addSection({ title: "Part C – Pipeline" });
@@ -290,7 +290,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
       { x: 1.1, y, w: 8.4, h: 0.4, fontSize: 16, margin: 0, isTextBox: true });
     s.addText(c[2], { x: 1.1, y: y + 0.4, w: 8.4, h: 0.45, fontSize: 14, color: C.text1, margin: 0, isTextBox: true });
   });
-  s.addNotes("Blocking matters because a true asset missing from the candidates can never be recovered; that's why I report blocking recall. Out-of-fold scoring avoids grading the model on records it trained on. The threshold is chosen by the cost of a wrong link, not by maximising F1.");
+  s.addNotes("Blocking matters because a true asset missing from the candidates can never be recovered, so I report blocking recall. Out-of-fold scoring means no record is graded by a model that trained on it. The threshold is set by the cost of a wrong link, not by maximising F1.");
 
   s = content("Rules vs ML: where each fails", "Part C – Pipeline");
   s.addChart(pres.charts.BAR, [
@@ -311,7 +311,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     { text: " ", options: { fontSize: 8, breakLine: true } },
     { text: "ML fixed 14 tags + 51 work orders the rules missed and broke none", options: { fontSize: 14, bold: true, color: C.accent1 } },
   ], { x: 5.3, y: 1.3, w: 4.2, h: 3.6, color: C.text1, valign: "top", margin: 0, isTextBox: true });
-  s.addNotes("Rules are kept as a baseline AND as a feature. The remaining ML errors are genuinely ambiguous records, which is exactly what the review band is for.");
+  s.addNotes("I keep the rules as a baseline and as a feature. The remaining ML errors are genuinely ambiguous records, which is what the review band is for.");
 
   s = content("Threshold set by the cost of a wrong link", "Part C – Pipeline");
   s.addChart(pres.charts.BAR, [{ name: "wrong auto-links", labels: ["0.50", "0.70", "0.80", "0.90", "0.932", "0.95"], values: [4, 3, 2, 1, 0, 0] }],
@@ -327,7 +327,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     [T("Three bands: "), { text: "auto · review (9 tags, 70 WOs) · backlog (52 WOs, from the out-of-fold data)" }],
     [T("Engineer decisions "), { text: "become method=engineer edges and new training labels" }],
   ], 14), { x: 5.5, y: 1.3, w: 4.0, h: 3.6, valign: "top", margin: 0, isTextBox: true });
-  s.addNotes("Interview Q3: how did you set the threshold? Lowest score where out-of-fold precision ≥ 0.995 and no wrong-machine error. A wrong auto-accepted link costs far more than a link waiting for review. Work orders that explain an anomaly are shown first in the review screen.");
+  s.addNotes("How I set the threshold (interview question 3): the lowest score where out-of-fold precision is at least 0.995 and there is no wrong-machine error. A wrong auto-accepted link costs far more than a link waiting for review. Below a second threshold, read from the same data, links go to a backlog; work orders that explain an anomaly are pulled into review and shown first.");
 
   s = content("One work order, raw text to graph edge", "Part C – Pipeline");
   card(s, 0.5, 1.2, 9, 0.85, "raw text card");
@@ -348,7 +348,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     s.addText([{ text: w[0] + ": ", options: { bold: true, color: C.text2 } }, { text: w[1] }],
       { x: 1.05, y, w: 8.45, h: 0.45, fontSize: 14, color: C.text1, valign: "middle", margin: 0, isTextBox: true });
   });
-  s.addNotes("Interview Q1. Where it can go wrong: the text names the robot, its gun AND the tip dresser; SAP could hold the order on any of the three. That is why it is not auto-accepted. Other risks: wrong line when the line is missing, misread Hinglish, SAP failure codes that contradict the text.");
+  s.addNotes("Interview question 1. Where it can go wrong: the text names the robot, its gun and the tip dresser, and SAP could hold the order on any of the three, so it is not auto-accepted. Other risks: a wrong line when the text has none, misread Hinglish, and SAP failure codes that contradict the text.");
 
   // ============================================================ Part D
   pres.addSection({ title: "Part D – Graph" });
@@ -373,7 +373,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     [T("Time-valid partOf: "), { text: "robot RB12 moved L1 → L2; old VINs keep the old line" }],
     [T("Values in Parquet: "), { text: "graph holds a store_uri pointer" }],
   ], 14), { x: 3.3, y: 3.0, w: 6.2, h: 2.0, valign: "top", margin: 0, isTextBox: true });
-  s.addNotes("Interview Q2 and Q5. RDF would win for cross-company semantic integration (AAS, suppliers); property graph wins for edge properties like time and confidence. Relocation: partOf has valid_from/valid_to, queries filter by the VIN's time. Containers vs views: one storage schema, three role views (maintenance, quality, traceability) in the ontology file.");
+  s.addNotes("Interview questions 2 and 5. RDF would win for cross-company semantics (AAS, suppliers); the property graph wins for properties on edges such as time and confidence. Relocation: partOf has valid_from and valid_to, and queries use the edge valid at the VIN's time. Containers vs views: one storage schema and three role views (maintenance, quality, traceability) in the ontology file.");
 
   s = content("Queries that answer plant questions", "Part D – Graph");
   const qs = [
@@ -390,7 +390,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   }
   s.addText("All seven required queries, with Cypher and real output: reports/12_graph_queries.md and the report's Appendix A.",
     { x: 0.5, y: 4.35, w: 9, h: 0.35, fontSize: 11, italic: true, color: C.accent5, margin: 0, isTextBox: true });
-  s.addNotes("Pick these three because they are decisions a plant would actually take: calibration plan, recall scope, inspection effectiveness. Offer to run any query live in the Neo4j browser.");
+  s.addNotes("I chose these three because they are decisions a plant takes: a calibration plan, a recall scope, and how effective inspection is. I can run any of the seven queries live in the Neo4j browser.");
 
   s = content("One VIN, end to end", "Part D – Graph");
   const tl = [["08:55", "body start", "BIW line 1"], ["40", "weld robots", "processedBy"], ["6 + 10", "sealer + paint", "robots"], ["11", "torque joints", "all OK"], ["9", "parts + lots", "incl. WS-260904-B"], ["20:00", "EOL audit", "44 stations"]];
@@ -408,7 +408,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     { text: "D700356 BW-017 weld nugget small", options: { bold: true, breakLine: true } },
     { text: "causedBy AN-003 on robot DDN1-BIW-L2-ST04-RB07 (derived, confidence 0.9) → fixed by WO 4102961. Every line is one Cypher query result." },
   ], { x: 1.45, y: 3.45, w: 7.9, h: 1.2, fontSize: 14, color: C.text1, valign: "middle", margin: 0, isTextBox: true });
-  s.addNotes("This is the demo video's second story (python -m ddn.demo vin). Mention inferred passages: missed RFID reads are filled from takt time and flagged; validated by hiding 5,793 real reads, median error 0.28 min.");
+  s.addNotes("This is the second story of my demo video (python -m ddn.demo vin). Missed RFID reads are filled from takt time and flagged as inferred; I validated that by hiding 5,793 real reads, with a median error of 0.28 minutes.");
 
   // ============================================================ Part E
   pres.addSection({ title: "Part E – AI" });
@@ -431,7 +431,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     [T("Judged "), { text: "by defect lift, a confirming WO and the manual's bake window" }],
     [T("Isolation Forest "), { text: "as comparison only: more windows, less meaning" }],
   ], 14), { x: 6.4, y: 1.25, w: 3.1, h: 3.7, valign: "top", margin: 0, isTextBox: true });
-  s.addNotes("AN-008 is the false alarm: the over-temperature was real but under 2 h and under +30 °C, inside the bake window in the oven manual, and the cars in the oven had no extra defects. AN-007 is a data problem, not a process problem.");
+  s.addNotes("AN-008 is the false alarm: the over-temperature was real but under 2 hours and under +30 °C, inside the bake window in the oven manual, and the cars in the oven had no extra defects. AN-007 is a data problem, not a process problem.");
 
   s = content("GraphRAG: grounded or silent", "Part E – AI");
   const rag = [["Question", md.MdQuestionAnswer], ["LLM writes Cypher", md.MdCode], ["Validate", md.MdVerifiedUser], ["Read-only run", md.MdLock], ["Cited answer", md.MdFormatQuote]];
@@ -446,7 +446,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     [T("Three ways to \"I don't know\": "), { text: "schema can't answer · 0 rows · nothing survives grounding" }],
     [T("LLM: "), { text: "OpenAI gpt-4o, temperature 0, structured JSON; Claude, Ollama and an offline mode are switchable" }],
   ], 14), { x: 0.5, y: 2.55, w: 9, h: 2.5, valign: "top", margin: 0, isTextBox: true });
-  s.addNotes("The safety is in code, not only in the prompt: Neo4j's read transaction is the real write guard, and the regex validator gives the LLM useful error messages for its one retry.");
+  s.addNotes("The safety is in code, not only in the prompt: Neo4j's read transaction is the real write guard, and the validator gives the LLM a precise error message for its retry.");
 
   s = content("The evaluation drove the design", "Part E – AI");
   s.addChart(pres.charts.BAR, [
@@ -464,7 +464,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     { text: " ", options: { fontSize: 8, breakLine: true } },
     { text: "No answer in any run contained an invented fact.", options: { fontSize: 14, bold: true, color: C.text2 } },
   ], { x: 5.9, y: 1.25, w: 3.6, h: 3.7, color: C.text1, valign: "top", margin: 0, isTextBox: true });
-  s.addNotes("Tell the story: 2/10 with gpt-4o-mini and a thin prompt; real relationship patterns, worked examples and direction checks took it to 7; the supplier-lot cause was missing from the graph itself (8 → 10). Then held-out 2/5 exposed overfitting, so fixes were made only by failure type, and a fresh held-out set passed 5/5 automatically, but reading the answers showed one led with a routine PM order instead of the repair: honestly 4/5. Run 5 also showed randomness, fixed with temperature 0.");
+  s.addNotes("How the evaluation drove the design: 2/10 with gpt-4o-mini and a thin prompt; real relationship patterns, worked examples and direction checks took it to 7; the supplier-lot cause was missing from the graph itself, and adding it took it to 10. A held-out set then scored 2/5, which showed overfitting, so I only made fixes by failure type and wrote a fresh held-out set. It passed 5/5 automatically, but reading the answers I found one that led with a routine PM order instead of the repair, so I count it as 4/5. Run 5 also showed randomness, which I fixed with temperature 0.");
 
   s = content("E3 bonus: link prediction", "Part E – AI");
   table(s, [["", "n", "hit@1", "hit@3", "hit@5"],
@@ -486,7 +486,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     { text: " ", options: { fontSize: 6, breakLine: true } },
     { text: "For 11 of 16 records the matcher got wrong, the right asset is in link prediction's top 3.", options: { fontSize: 13 } },
   ], { x: 6.6, y: 1.35, w: 2.75, h: 3.4, fontSize: 14, color: C.text1, valign: "top", margin: 0, isTextBox: true });
-  s.addNotes("Bonus E3. Be honest about the history: the first spectral embedding scored hit@1 0.03 because sibling robots share tokens; aggregating the approved links fixed it. It is weaker than the matcher overall, so it only helps where the matcher is unsure: the backlog. Two settings were picked on the same folds, so the numbers are slightly optimistic.");
+  s.addNotes("Bonus E3. My first version, a spectral embedding, scored hit@1 0.03 because sibling robots share tokens; aggregating the approved links fixed it. It is weaker than the matcher overall, so I use it only where the matcher is unsure: the backlog. I picked its two settings on the same folds, so the numbers are slightly optimistic.");
 
   // ============================================================ wrap-up
   pres.addSection({ title: "Wrap-up" });
@@ -505,7 +505,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     s.addText([{ text: lim[i][1], options: { bold: true, breakLine: true } }, { text: lim[i][2] }],
       { x: x + 0.65, y, w: 3.8, h: 0.95, fontSize: 14, color: C.text1, valign: "top", margin: 0, isTextBox: true });
   }
-  s.addNotes("Interview Q4: why might it score lower on real data? Real naming is less regular, labels are noisier, new lines appear. How to find out: label 200 random records per source and plant, and track the precision of auto-accepted links monthly.");
+  s.addNotes("Interview question 4: why real data might score lower. Real naming is less regular, labels are noisier and new lines appear. To find out, I would label 200 random records per source and plant, and track the precision of auto-accepted links every month.");
 
   s = content("At 10 plants and 2 M VINs a year", "Wrap-up");
   const sc = [
@@ -522,7 +522,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   }
   s.addText("In Cognite: spaces + DMS for structure, the time-series API for values, Atlas AI for agents. The design maps one to one.",
     { x: 0.5, y: 4.8, w: 9, h: 0.35, fontSize: 12, italic: true, color: C.accent5, margin: 0, isTextBox: true });
-  s.addNotes("Interview Q2 (scale) and Q7 (Cognite). With my own stack I lose Cognite's managed extractors, diagram parsing, access control and Atlas AI. I gain transparency, cost control and no lock-in, at the price of operating it myself.");
+  s.addNotes("Interview questions 2 (scale) and 7 (Cognite). With my own stack I lose Cognite's managed extractors, diagram parsing, access control and Atlas AI. I gain transparency, cost control and no lock-in, at the price of operating it myself.");
 
   // ============================================================ live demo
   pres.addSection({ title: "Live demo and code" });
@@ -542,7 +542,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   }
   s.addText("Before the interview: run_all once, start Neo4j, open both Streamlit screens after the last git pull.",
     { x: 0.5, y: 4.85, w: 9, h: 0.3, fontSize: 11, italic: true, color: C.accent5, margin: 0, isTextBox: true });
-  s.addNotes("Keep each demo to 2 minutes. In the review screen, approve the first item (it explains anomaly AN-003). In the ask screen, ask the cold-weld question, open the Cypher expander, then ask the shift-supervisor question to show 'I don't know'.");
+  s.addNotes("About 2 minutes per demo. In the review screen I search for WO 4102964, approve it, run python -m ddn.graph --decisions, and show the same Neo4j query before and after. In the ask screen I ask the cold-weld question, open the Cypher expander, then ask the shift-supervisor question to show 'I don't know'.");
 
   s = content("Code walkthrough: where to look", "Live demo and code");
   table(s, [
@@ -557,7 +557,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     ["src/ddn/graphrag.py", "validate(), run_read(), ground(), expand()"],
     ["src/ddn/linkpred.py", "E3: LinkPredictor.fit() aggregates approved links; suggest()"],
   ], { x: 0.5, y: 1.15, w: 9, colW: [3.4, 5.6], fontSize: 13, rowH: 0.37 });
-  s.addNotes("Let them choose. For 'walk through one work order' (question 1) open textnorm.extract, then match_ml features, then the review screen. For 'why does the graph think this' open graph.prov and show an edge's evidence in the Neo4j browser.");
+  s.addNotes("The interviewers can choose. For 'walk through one work order' (question 1) I open textnorm.extract, then the match_ml features, then the review screen. For 'why does the graph think this' I open graph.prov and show an edge's evidence in the Neo4j browser.");
 
   s = pres.addSlide({ masterName: "TITLE_DARK", sectionTitle: "Wrap-up" });
   s.addText("Working, measured, honest", { placeholder: "title" });
@@ -565,7 +565,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     { text: "github.com/akashnegetive/Industrial-AI-Automobile-Manufacturing-Plant", options: { breakLine: true } },
     { text: "Live: python -m ddn.demo tag · python -m ddn.demo vin · streamlit run apps/ask_app.py", options: { fontSize: 14, color: C.accent1 } },
   ], { placeholder: "body" });
-  s.addNotes("Close with the rubric's own phrase: working, honest, measured code. Offer the code walkthrough: pipeline.py for the step list, match_ml.py for features and thresholds, graph.py for provenance, graphrag.py for the validator and grounding.");
+  s.addNotes("Working, measured, honest. For the code walkthrough: pipeline.py for the step list, match_ml.py for features and thresholds, graph.py for provenance, graphrag.py for the validator and grounding.");
 
   // ============================================================ backup
   pres.addSection({ title: "Backup – interview questions" });
@@ -586,7 +586,7 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
       s.addText([{ text: q[0], options: { bold: true, color: C.text2, breakLine: true } }, { text: q[1] }],
         { x: 1.05, y, w: 8.45, h: 0.88, fontSize: 14, color: C.text1, valign: "top", margin: 0, isTextBox: true });
     });
-    s.addNotes("Backup slides: only show if the question comes up. The answers are short on purpose; expand verbally.");
+    s.addNotes("Backup slides, shown only if the question comes up. The answers are short on purpose; I expand on them verbally.");
   }
 
   await pres.writeFile({ fileName: OUT });
