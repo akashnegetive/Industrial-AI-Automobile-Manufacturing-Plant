@@ -7,7 +7,7 @@
 | Data-quality report, ontology file, pipeline code, graph loader, AI layer, tests | reports/02, ontology/, src/ddn/, tests/ (99) | done |
 | Report, 8–12 pages: Part A, design decisions, metrics, limitations, real-plant changes | report/REPORT.pdf (11 pages) | done (12 pages; Part A links checked) |
 | 5-minute demo video: one robot tag → graph node, one VIN end to end | docs/DEMO_SCRIPT.md; helpers `python -m ddn.demo tag` / `vin` | **you record it** |
-| Slides for the 45-minute interview | slides/DDN01_interview.pptx (27 slides, speaker notes) | done, **rehearse** |
+| Slides for the 45-minute interview | slides/DDN01_interview.pptx (30 slides, speaker notes) | done, **rehearse** |
 | Hidden-test predictions (Part C is scored on them) | outputs/predictions_*.csv | done |
 
 ## Still to do (only you can)

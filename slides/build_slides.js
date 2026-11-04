@@ -113,6 +113,28 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   ], { placeholder: "body" });
   s.addNotes("Introduce yourself in one sentence. Then: 'I built a working pipeline that links the plant's siloed records to one asset hierarchy, loads them into a Neo4j knowledge graph with provenance on every edge, and uses that graph for anomaly detection and grounded question answering. Everything runs with one command on the synthetic DDN-01 pack. I'll show results, design choices and the limits, then walk through the code.'");
 
+  // ============================================================ agenda
+  s = content("Plan for the 45 minutes", "Opening");
+  const agenda = [
+    ["0–5", "Problem and results", "one robot, five names · what I built · four numbers"],
+    ["5–8", "Part A", "how Cognite, Siemens and AWS do it; what I borrowed"],
+    ["8–11", "Part B", "data quality and the nine production problems"],
+    ["11–19", "Part C", "matching, thresholds, review loop, one work order end to end"],
+    ["19–24", "Part D", "ontology, provenance, queries, one VIN end to end"],
+    ["24–29", "Part E", "anomalies in context, GraphRAG and how it was evaluated"],
+    ["29–32", "Limits and scale", "what I'd say before you ask"],
+    ["32–45", "Live demo, code, questions", "run it, open the code, your questions"],
+  ];
+  agenda.forEach((a, i) => {
+    const y = 1.15 + i * 0.49;
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.5, y, w: 1.0, h: 0.4, rectRadius: 0.06, fill: { color: i === 7 ? C.accent1 : C.background2 },
+      line: { color: i === 7 ? C.accent1 : C.background2 }, objectName: `agenda time ${i + 1}` });
+    s.addText(a[0] + " min", { x: 0.5, y, w: 1.0, h: 0.4, fontSize: 13, bold: true, color: i === 7 ? C.background1 : C.text2, align: "center", valign: "middle", margin: 0, isTextBox: true });
+    s.addText([{ text: a[1] + "  ", options: { bold: true, color: C.text2 } }, { text: a[2], options: { color: C.text1 } }],
+      { x: 1.7, y, w: 7.8, h: 0.4, fontSize: 14, valign: "middle", margin: 0, isTextBox: true });
+  });
+  s.addNotes("Say the plan in one sentence and keep to it: about 30 minutes of slides, then live demo and code. If they interrupt with questions, use the backup slides at the end.");
+
   // ============================================================ 2 problem
   s = content("One robot, five names", "Opening");
   table(s, [
@@ -452,8 +474,8 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
     [md.MdTune, "Thresholds from little data", "one more error would move the WO threshold"],
     [md.MdPendingActions, "Root causes in review", "4 of 8 root-cause WOs wait for an engineer"],
     [md.MdSchedule, "Inferred reads after buffers", "up to 69 min off; flagged with uncertainty"],
-    [md.MdHelpOutline, "Causes are hypotheses", "lot cause needs a defect-to-part map"],
-    [md.MdCloudOff, "GraphRAG via OpenAI", "fine for synthetic data, not for a real plant"],
+    [md.MdHelpOutline, "Causes are hypotheses", "lot cause needs a defect-to-part map; E3 not attempted"],
+    [md.MdCloudOff, "GraphRAG: lenient check, OpenAI", "automatic 5/5 was 4/5 by hand; data sent out"],
   ];
   for (let i = 0; i < lim.length; i++) {
     const x = 0.5 + (i % 2) * 4.6, y = 1.2 + Math.floor(i / 2) * 1.2;
@@ -479,6 +501,40 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   s.addText("In Cognite: spaces + DMS for structure, the time-series API for values, Atlas AI for agents. The design maps one to one.",
     { x: 0.5, y: 4.8, w: 9, h: 0.35, fontSize: 12, italic: true, color: C.accent5, margin: 0, isTextBox: true });
   s.addNotes("Interview Q2 (scale) and Q7 (Cognite). With my own stack I lose Cognite's managed extractors, diagram parsing, access control and Atlas AI. I gain transparency, cost control and no lock-in, at the price of operating it myself.");
+
+  // ============================================================ live demo
+  pres.addSection({ title: "Live demo and code" });
+  s = content("Live demo: four things to show", "Live demo and code");
+  const demo = [
+    [md.MdTerminal, "python -m ddn.demo tag DDN1_BIW_L2_R07_WELDCUR.PV", "raw tag → parsed → matched → graph edge with provenance"],
+    [md.MdDirectionsCar, "python -m ddn.demo vin", "one car: stations, robots, torque, lots, defect → cause → work order"],
+    [md.MdFactCheck, "streamlit run apps/review_app.py", "approve or correct a link; it becomes an engineer edge and a label"],
+    [md.MdQuestionAnswer, "streamlit run apps/ask_app.py", "a cited answer, its Cypher, and an honest \"I don't know\""],
+  ];
+  for (let i = 0; i < demo.length; i++) {
+    const y = 1.2 + i * 0.92;
+    await iconCircle(s, demo[i][0], 0.5, y + 0.05, 0.55, C.accent1, `demo ${i + 1} icon`);
+    s.addText([{ text: demo[i][1], options: { fontFace: "Courier New", bold: true, color: C.text2, fontSize: 14, breakLine: true } },
+      { text: demo[i][2], options: { fontSize: 14, color: C.text1 } }],
+      { x: 1.25, y, w: 8.25, h: 0.8, valign: "middle", margin: 0, isTextBox: true });
+  }
+  s.addText("Before the interview: run_all once, start Neo4j, open both Streamlit screens after the last git pull.",
+    { x: 0.5, y: 4.85, w: 9, h: 0.3, fontSize: 11, italic: true, color: C.accent5, margin: 0, isTextBox: true });
+  s.addNotes("Keep each demo to 2 minutes. In the review screen, approve the first item (it explains anomaly AN-003). In the ask screen, ask the cold-weld question, open the Cypher expander, then ask the shift-supervisor question to show 'I don't know'.");
+
+  s = content("Code walkthrough: where to look", "Live demo and code");
+  table(s, [
+    ["File", "Open it to show"],
+    ["src/ddn/pipeline.py", "the 17 steps in order: one list used by make all and run_all"],
+    ["src/ddn/match_ml.py", "CandidateGenerator (blocking), pair_features(), cross_validate(), thresholds()"],
+    ["src/ddn/review.py, apps/review_app.py", "review queue, decisions.csv, decisions reused as labels"],
+    ["ontology/ontology_v1.yaml", "node and edge types, provenance, views, changelog"],
+    ["src/ddn/graph.py", "prov() on every edge, approved_links(), validate_graph()"],
+    ["src/ddn/queries.py", "the seven Cypher queries D1–D7"],
+    ["src/ddn/anomaly.py", "robust_z(), alarm_windows(), judge()"],
+    ["src/ddn/graphrag.py", "validate(), run_read(), ground(), expand()"],
+  ], { x: 0.5, y: 1.2, w: 9, colW: [3.4, 5.6], fontSize: 13, rowH: 0.42 });
+  s.addNotes("Let them choose. For 'walk through one work order' (question 1) open textnorm.extract, then match_ml features, then the review screen. For 'why does the graph think this' open graph.prov and show an edge's evidence in the Neo4j browser.");
 
   s = pres.addSlide({ masterName: "TITLE_DARK", sectionTitle: "Wrap-up" });
   s.addText("Working, measured, honest", { placeholder: "title" });
