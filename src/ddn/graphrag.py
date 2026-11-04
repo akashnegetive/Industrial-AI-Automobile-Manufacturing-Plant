@@ -381,7 +381,7 @@ class Answer:
     dropped_sentences: int = 0
     attempts: int = 0
     history: list[str] = field(default_factory=list)
-    context: list[dict] = field(default_factory=list)         # facts added by expand(), not by the LLM's query          # rejected / empty queries before the final one
+    context: list[dict] = field(default_factory=list)         # facts added by expand(), not by the LLM's query
 
     def text(self) -> str:
         if self.dont_know:

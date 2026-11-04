@@ -104,3 +104,4 @@ goes to GitHub. Don't paste it into chat, screenshots or the demo video.
 | `openai.AuthenticationError` / `401` | Key wrong or revoked | Create a new key, `setx` again, reopen PowerShell |
 | `openai.RateLimitError` / `429 insufficient_quota` | No credit on the OpenAI account | Add credit on platform.openai.com, or run offline |
 | `model_not_found` | Your account can't use the default model | `setx DDN_LLM_MODEL "gpt-4o-mini"` (or another model you have) |
+| Streamlit screen shows an old answer or `AttributeError: ... has no attribute` after `git pull` | The screen was started before the pull and still had the old code in memory | Ctrl + C in its window and start it again (ask_app now reloads GraphRAG by itself) |

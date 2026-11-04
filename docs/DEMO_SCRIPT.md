@@ -4,6 +4,7 @@ The assignment asks for: **one robot tag going from raw name to a graph node, an
 end.** Everything below runs on the laptop after `run_all.bat` has finished (Neo4j running).
 
 **Before recording:**
+- Start the Streamlit screen **after** your last `git pull` and `run_all` (a screen started earlier keeps old code in memory).
 - Close other windows and make the PowerShell font big (Ctrl + mouse wheel).
 - Open these and leave them ready:
   - PowerShell in the project folder, with `$env:PYTHONPATH = "src"` already run;

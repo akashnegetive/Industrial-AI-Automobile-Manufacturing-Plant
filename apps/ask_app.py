@@ -14,7 +14,16 @@ import pandas as pd
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+import importlib  # noqa: E402
+
 from ddn import graphrag as G  # noqa: E402
+
+# Streamlit re-runs this script on every question but keeps imported modules in memory. Reload GraphRAG
+# when its file changed (e.g. after git pull) so a running screen never mixes old and new code.
+_mtime = Path(G.__file__).stat().st_mtime
+if st.session_state.get("graphrag_mtime") not in (None, _mtime):
+    G = importlib.reload(G)
+st.session_state["graphrag_mtime"] = _mtime
 
 st.set_page_config(page_title="DDN-01 ask the plant", layout="wide")
 st.title("Plant DDN-01 – ask the plant")
