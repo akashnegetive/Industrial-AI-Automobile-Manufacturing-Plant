@@ -1,5 +1,7 @@
 # Demo video – step-by-step guide (5 minutes)
 
+**Printable version with what to say at every step:** [`docs/demo_video/DEMO_VIDEO_GUIDE.pdf`](demo_video/DEMO_VIDEO_GUIDE.pdf).
+
 **What the assignment asks for:** "a 5-minute demo video: one robot tag going from raw name to a graph node,
 and one VIN traced end to end." Those two stories are the core of the video. The rest (graph browser, question
 box, review screen) is a short bonus if time allows.
