@@ -1,56 +1,109 @@
 # Plant DDN-01 – Contextualization & Knowledge Graph
 
-Industrial AI take-home assignment: link siloed car-plant data to one asset model, load it into a knowledge graph, and use it for anomaly detection and grounded Q&A.
+A Python pipeline that links the siloed records of a car plant (SAP assets, historian tags, MES/RFID, work
+orders, drawings, alarms, defects) to one asset hierarchy. It loads them into a **Neo4j knowledge graph with
+provenance on every edge**, then uses the graph for **anomaly detection** and **grounded question answering
+(GraphRAG)**. Built on the synthetic Plant DDN-01 data pack (1–14 Sep 2026).
 
-## Run
+**Report:** [`report/REPORT.pdf`](report/REPORT.pdf) · **Slides:** [`slides/DDN01_interview.pptx`](slides/DDN01_interview.pptx) · **Demo video (5 min):** *link to be added*
 
-**Windows laptop: full setup, daily update commands and expected output are in [`docs/LAPTOP_SETUP.md`](docs/LAPTOP_SETUP.md).**
+## Results
 
-1. From the unzipped candidate pack, copy
-   - the `data/` files into `data/raw/` (see `data/raw/README.md`), and
-   - the `documents/` folder into `docs/source_pack/` (see `docs/source_pack/README.md`).
-2. Run everything with **one command** (the first run creates `.venv` and installs the requirements; Docker
-   must be running for the graph steps):
+| | Result |
+|---|---|
+| Entity matching (out-of-fold on TRAIN labels) | Tags **F1 1.000**, work orders **F1 0.982**; **0 wrong auto-accepted links** |
+| Automatically contextualized | 99.4 % of tags, 95.9 % of work orders; the rest wait in the engineer review screen |
+| Knowledge graph | 165,706 nodes, 1,137,011 relationships, 0 edges without provenance, 0 ontology violations |
+| Anomaly detection | 8 / 8 seeded signal problems found, each linked to equipment, VINs, defects and a work order; 1 judged a false alarm, with reasons |
+| GraphRAG | 10 / 10 on the evaluation set, **5 / 5 on unseen held-out questions**; every failure in every run was "I don't know", never a wrong fact |
 
-| System | One command |
+The hidden-test predictions for Part C are in [`outputs/`](outputs/): every tag and work order, with confidence
+and band.
+
+## Run it (one command)
+
+1. From the candidate pack, copy the `data/` files into `data/raw/` and the `documents/` folder into
+   `docs/source_pack/` (the pack is not in this repository).
+2. Run:
+
+| System | Command |
 |---|---|
 | Mac / Linux | `docker compose up -d && make all` |
-| Windows | double-click `run_all.bat`, or in PowerShell `.\run_all.ps1` (it runs `docker compose up -d` itself) |
+| Windows | `run_all.bat` (double-click), or `.\run_all.ps1` in PowerShell |
 
-Needs Python 3.11+ and Docker (Neo4j 5 runs in it). The first run takes about 15 minutes; expected output per
-step is in `docs/LAPTOP_SETUP.md`. Optional: `OPENAI_API_KEY` for GraphRAG with an LLM; without it the
-GraphRAG step runs an offline template baseline, so the pipeline and tests still complete.
+Needs **Python 3.11+** and **Docker** (Neo4j 5 Community runs in it). The first run creates `.venv`, installs
+the requirements and takes about 15 minutes: 17 steps, then 99 tests. Expected output per step is in
+[`docs/LAPTOP_SETUP.md`](docs/LAPTOP_SETUP.md).
 
-Both run the same steps (`src/ddn/pipeline.py`): reports in `reports/`, staging tables in `data/staging/`, then the tests.
+Optional:
+- **Tesseract OCR**, to read the one scanned drawing (otherwise it is skipped).
+- **`OPENAI_API_KEY`**, for GraphRAG with an LLM. Without it, the step runs an offline template baseline, so
+  the pipeline and the tests still complete.
 
-Optional: install [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) to read the scanned drawing; without it that one drawing is skipped.
+## How it works
 
-Start reading at `docs/LEARNING_GUIDE.md`; each day's work is explained in `docs/dayNN_explained.md`.
+```
+sources ──► staging ──► blocking ──► rules + LightGBM ──► confidence gate ──► Neo4j graph ──► anomalies (E1)
+(SAP, tags, (pydantic,  (TF-IDF     (20 pair features,    auto-accept │        (provenance,    GraphRAG (E2)
+ MES, WOs,   units,      top-15)     out-of-fold CV)      review ─────┘        time-valid      queries D1–D7
+ drawings…)  ISA-5.1)                                     (Streamlit)          partOf; values
+                                                                               in Parquet)
+```
 
-## Progress
-| Part | Status | Output |
-|---|---|---|
-| B.1 Dataset profiles | done | `reports/01_dataset_profile.md` |
-| B.2 Data-quality report (38 issues, 15 not in the data dictionary) | done | `reports/02_data_quality.md` |
-| B.3 Identity schemes | done | `reports/03_identity_schemes.md` |
-| B.4 Production problems (9, with evidence) | done | `reports/04_production_problems.md` |
-| A Vendor research (Cognite, Siemens, AWS; every link checked) | done | `docs/part_a_research.md` |
-| D Ontology v1.3 (18 node, 19 edge types) | done | `ontology/ontology_v1.yaml`, `docs/ontology.md` |
-| C1 Staging (typed Parquet, deg F -> deg C) | done | `data/staging/` (generated) |
-| C Rules baseline: tags F1 0.987, work orders F1 0.950 | done | `reports/05_matching_rules_baseline.md` |
-| C ML matcher: tags F1 1.000, work orders F1 0.982, 0 wrong auto-links | done | `reports/06_matching_ml.md` |
-| C5 Documents: 145 drawing labels (incl. OCR of the scan), manual alarm codes + failure modes | done | `reports/07_documents.md` |
-| C4 Work-order failure modes (ISO 14224, spaCy) | done | `reports/08_workorders.md` |
-| MES stations, `feeds` edges, alarm sources | done | `reports/09_stations_alarms.md` |
-| C6 VIN traceability (missed reads inferred + validated) | done | `reports/10_vin_traceability.md` |
-| C7 Review queue + Streamlit review screen; decisions reused as labels | done | `apps/review_app.py`, `data/review/decisions.csv` |
-| D Neo4j graph: 165,698 nodes, 1.13 M edges, provenance on every edge | done | `reports/11_graph_load.md` |
-| D Seven graph queries (Cypher) | done | `reports/12_graph_queries.md` |
-| E1 Anomaly detection: 8/8 signal problems, judged (5 quality, 1 equipment, 1 sensor fault, 1 false alarm), in the graph | done | `reports/13_anomalies.md` |
-| Report (11 pages, Part A + design + metrics + limitations + real-plant changes + query appendix) | done | `report/REPORT.pdf` (source `report/REPORT.md`, build `python report/build.py`) |
-| Interview slides (27, with speaker notes) | done | `slides/DDN01_interview.pptx` |
-| Submission checklist | – | `docs/SUBMISSION_CHECKLIST.md` |
-| Data profiling notebook | done | `notebooks/01_data_profiling.ipynb` |
-| Hidden-test predictions (all records, with confidence and band) | done | `outputs/predictions_*.csv` |
-| Demo helper + 5-minute video script | done | `python -m ddn.demo tag` / `vin`, `docs/DEMO_SCRIPT.md` |
-| E2 GraphRAG: question → validated read-only Cypher → cited answer; 10/10 tuned, 5/5 on unseen held-out questions (gpt-4o) | done | `src/ddn/graphrag.py`, `apps/ask_app.py`, `reports/14_graphrag.md` |
+- **Canonical key:** the SAP functional location (`DDN1-BIW-L2-ST04-RB07`); every other identifier is linked to it.
+- **Thresholds by cost:** auto-accept only where the out-of-fold precision is ≥ 0.995 with no wrong-machine
+  error. Everything else goes to the review screen, and each engineer decision becomes an edge and a training
+  label.
+- **Ontology first:** [`ontology/ontology_v1.yaml`](ontology/ontology_v1.yaml) (v1.3, 18 node and 19 edge types)
+  drives the loader, the validation and the GraphRAG schema. Rendered as [`docs/ontology.md`](docs/ontology.md).
+- **GraphRAG safety in code:** LLM-written Cypher is validated against the ontology and run read-only;
+  every sentence must cite IDs found in the result rows.
+
+The design decisions and their reasons are in the report, section 3.
+
+## Try it
+
+```bash
+python -m ddn.demo tag DDN1_BIW_L2_R07_WELDCUR.PV   # one robot tag: raw name -> graph node
+python -m ddn.demo vin                              # one VIN traced end to end
+streamlit run apps/review_app.py                    # engineer review screen (approve / reject / correct)
+streamlit run apps/ask_app.py                       # ask the plant (GraphRAG)
+```
+Run these with `PYTHONPATH=src` and the `.venv` Python. The Neo4j browser is at http://localhost:7474
+(user `neo4j`, password `ddn-plant-2026`).
+
+## Deliverables
+
+| Assignment part | Where |
+|---|---|
+| A – Vendor research (Cognite, Siemens, AWS) | [`docs/part_a_research.md`](docs/part_a_research.md), report section 1 |
+| B – Profiles, data quality (38 issues), identity schemes, 9 production problems | [`notebooks/01_data_profiling.ipynb`](notebooks/01_data_profiling.ipynb), [`reports/01`–`04`](reports/) |
+| C – Matching (rules vs ML), documents/OCR, work orders (ISO 14224), VIN traceability, review | [`reports/05`–`10`](reports/), [`apps/review_app.py`](apps/review_app.py), [`outputs/`](outputs/) |
+| D – Ontology, graph load, the 7 queries | [`ontology/`](ontology/), [`reports/11`–`12`](reports/) |
+| E – Anomaly detection, GraphRAG | [`reports/13`–`14`](reports/), [`apps/ask_app.py`](apps/ask_app.py) |
+| Report, slides, demo script | [`report/`](report/), [`slides/`](slides/), [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) |
+| AI-assistant disclosure | [`docs/AI_USAGE.md`](docs/AI_USAGE.md) |
+
+## Repository layout
+
+```
+src/ddn/        pipeline code; pipeline.py holds the step list used by make all and run_all
+apps/           Streamlit screens: review_app.py, ask_app.py
+ontology/       ontology_v1.yaml (versioned, with changelog)
+reports/        generated reports 01–14 (Markdown, regenerated on every run)
+outputs/        predictions for the hidden test set
+tests/          pytest suite (99 tests; graph tests skip if Neo4j is not running)
+notebooks/      data profiling notebook
+report/ slides/ final report (PDF + Markdown source) and interview slides
+docs/           research, ontology docs, laptop setup, design notes per stage (dayNN_explained.md)
+data/raw/       the data pack goes here (not committed)
+```
+
+## Limitations
+
+The full list is in the report, section 5. In short: scores are out-of-fold on the TRAIN labels, so the hidden
+test set is the real measure. The data is synthetic and its naming more regular than a real plant's. 4 of the 8
+root-cause work orders wait in the review band. Root causes are stored as hypotheses (`status=suggested`).
+GraphRAG was evaluated on 20 questions and sends data to OpenAI, which is acceptable only for synthetic data.
+
+Synthetic data only: no real customer or employer data is used.
