@@ -540,8 +540,9 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
       { text: demo[i][2], options: { fontSize: 14, color: C.text1 } }],
       { x: 1.25, y, w: 8.25, h: 0.8, valign: "middle", margin: 0, isTextBox: true });
   }
-  s.addText("Before the interview: run_all once, start Neo4j, open both Streamlit screens after the last git pull.",
-    { x: 0.5, y: 4.85, w: 9, h: 0.3, fontSize: 11, italic: true, color: C.accent5, margin: 0, isTextBox: true });
+  s.addText([{ text: "Recorded demo (5 min): ", options: { bold: true } },
+    { text: "youtu.be/86zMkBF6CfI", options: { hyperlink: { url: "https://youtu.be/86zMkBF6CfI" } } }],
+    { x: 0.5, y: 4.85, w: 9, h: 0.3, fontSize: 12, color: C.text2, margin: 0, isTextBox: true });
   s.addNotes("About 2 minutes per demo. In the review screen I search for WO 4102964, approve it, run python -m ddn.graph --decisions, and show the same Neo4j query before and after. In the ask screen I ask the cold-weld question, open the Cypher expander, then ask the shift-supervisor question to show 'I don't know'.");
 
   s = content("Code walkthrough: where to look", "Live demo and code");
@@ -562,7 +563,10 @@ const verdictColor = { true_positive_quality: C.accent4, true_positive_equipment
   s = pres.addSlide({ masterName: "TITLE_DARK", sectionTitle: "Wrap-up" });
   s.addText("Working, measured, honest", { placeholder: "title" });
   s.addText([
-    { text: "github.com/akashnegetive/Industrial-AI-Automobile-Manufacturing-Plant", options: { breakLine: true } },
+    { text: "Code: github.com/akashnegetive/Industrial-AI-Automobile-Manufacturing-Plant",
+      options: { breakLine: true, hyperlink: { url: "https://github.com/akashnegetive/Industrial-AI-Automobile-Manufacturing-Plant" } } },
+    { text: "Demo video (5 min): youtu.be/86zMkBF6CfI",
+      options: { breakLine: true, hyperlink: { url: "https://youtu.be/86zMkBF6CfI" } } },
     { text: "Live: python -m ddn.demo tag · python -m ddn.demo vin · streamlit run apps/ask_app.py", options: { fontSize: 14, color: C.accent1 } },
   ], { placeholder: "body" });
   s.addNotes("Working, measured, honest. For the code walkthrough: pipeline.py for the step list, match_ml.py for features and thresholds, graph.py for provenance, graphrag.py for the validator and grounding.");
